@@ -4,3 +4,4 @@ build/
 .env
 *.log
 server/data/*.sqlite*
+server/data/state.json

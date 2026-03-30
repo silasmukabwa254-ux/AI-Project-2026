@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Project 2026</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div>
+          <h1>AI Project 2026</h1>
+          <p>Personal assistant workspace</p>
+        </div>
+      </div>
+
+      <section class="panel">
+        <h2>Conversations</h2>
+        <div class="list" id="conversation-list"></div>
+      </section>
+
+      <section class="panel">
+        <h2>Memory</h2>
+        <div class="list" id="memory-preview"></div>
+      </section>
+    </aside>
+
+    <main class="chat-panel">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Status</p>
+          <h2>Realistic assistant</h2>
+        </div>
+        <button class="ghost-button" type="button">Settings</button>
+      </header>
+
+      <section class="hero">
+        <h3>Talk naturally.</h3>
+        <p>Ask, command, and reflect with a personal AI that stays grounded.</p>
+        <div class="quick-actions" id="quick-actions">
+          <button type="button" data-command="/remember my favorite color is blue">Remember a fact</button>
+          <button type="button" data-command="/note Build the first AI prototype">Save a note</button>
+          <button type="button" data-command="/summary">Summarize chat</button>
+        </div>
+      </section>
+
+      <section class="messages" id="messages" aria-live="polite"></section>
+
+      <form class="composer" id="composer">
+        <button class="icon-button" type="button" aria-label="Voice input">Mic</button>
+        <input id="message-input" name="message" type="text" placeholder="Type a message..." autocomplete="off">
+        <button class="primary-button" type="submit">Send</button>
+      </form>
+    </main>
+
+    <aside class="inspector">
+      <section class="panel">
+        <h2>Personality</h2>
+        <p id="personality-note">Realistic, calm, and familiar.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Commands</h2>
+        <ul class="command-list">
+          <li>Save note</li>
+          <li>Create todo</li>
+          <li>Summarize chat</li>
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>

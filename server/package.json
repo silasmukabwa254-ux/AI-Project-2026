@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "description": "SQLite-backed server for AI Project 2026",
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "scripts": {
     "start": "node server.js"
   }

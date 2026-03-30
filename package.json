@@ -1,0 +1,12 @@
+{
+  "name": "ai-project-2026",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Standalone AI Project 2026 frontend and backend workspace",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "start": "node server/server.js"
+  }
+}

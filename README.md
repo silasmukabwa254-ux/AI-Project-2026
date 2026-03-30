@@ -96,3 +96,6 @@ To use the real AI replies, set `OPENAI_API_KEY` in your environment or `.env` f
 - `client/config.js` is the small deployment config file for the frontend.
 - `CORS_ORIGIN` can stay `*` for quick testing, or be set to your GitHub Pages origin if you want to lock it down.
 - The frontend does not need the backend host to be the same origin anymore.
+- The repo root now has a `package.json`, so a host like Railway can run the backend from the whole repo with `npm start`.
+- The backend still stores its SQLite file in `server/data/ai-project-2026.sqlite`, so add a persistent volume on the host if you want the history to survive restarts.
+- If you use Railway, mount the volume at `/app/server/data` so the SQLite file stays in the right place.

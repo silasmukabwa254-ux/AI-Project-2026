@@ -1,0 +1,99 @@
+{
+  "conversations": [
+    {
+      "id": "conversation-mncsdlmu-c7vts9",
+      "title": "hello",
+      "summary": "We have 7 user messages and 2 saved memoryies. Latest point: \"/summary\".",
+      "createdAt": "2026-03-30T06:07:41.765Z"
+    }
+  ],
+  "memories": [
+    {
+      "id": "memory-mncss9qj-6mdrwp",
+      "label": "Name",
+      "value": "silas your owner",
+      "createdAt": "2026-03-30T06:19:06.187Z",
+      "updatedAt": "2026-03-30T06:19:06.187Z"
+    },
+    {
+      "id": "memory-mncsdlmu-pkkzmx",
+      "label": "Assistant tone",
+      "value": "Realistic, calm, and familiar",
+      "createdAt": "2026-03-30T06:07:41.765Z"
+    }
+  ],
+  "messages": [
+    {
+      "id": "message-mncsdlmu-99kwqc",
+      "role": "assistant",
+      "text": "Welcome to AI Project 2026. We can shape the layout first, then add intelligence.",
+      "createdAt": "2026-03-30T06:07:41.765Z"
+    },
+    {
+      "id": "message-mncsroyc-dnuzrn",
+      "role": "user",
+      "text": "hello",
+      "createdAt": "2026-03-30T06:18:39.252Z"
+    },
+    {
+      "id": "message-mncsroyd-uxw128",
+      "role": "user",
+      "text": "hello",
+      "createdAt": "2026-03-30T06:18:39.253Z"
+    },
+    {
+      "id": "message-mncsroyd-kw1wr3",
+      "role": "assistant",
+      "text": "I'm with you. Want me to turn that into a note?",
+      "createdAt": "2026-03-30T06:18:39.253Z"
+    },
+    {
+      "id": "message-mncsrv44-jx91xw",
+      "role": "user",
+      "text": "yes",
+      "createdAt": "2026-03-30T06:18:47.236Z"
+    },
+    {
+      "id": "message-mncsrv45-vi4swf",
+      "role": "user",
+      "text": "yes",
+      "createdAt": "2026-03-30T06:18:47.237Z"
+    },
+    {
+      "id": "message-mncsrv45-ub7jbn",
+      "role": "assistant",
+      "text": "That makes sense. We can save the key part if you want.",
+      "createdAt": "2026-03-30T06:18:47.237Z"
+    },
+    {
+      "id": "message-mncss9qi-5qwtt8",
+      "role": "user",
+      "text": "my name is silas your owner",
+      "createdAt": "2026-03-30T06:19:06.186Z"
+    },
+    {
+      "id": "message-mncss9qj-awfd2m",
+      "role": "user",
+      "text": "my name is silas your owner",
+      "createdAt": "2026-03-30T06:19:06.187Z"
+    },
+    {
+      "id": "message-mncss9qj-foyxn5",
+      "role": "assistant",
+      "text": "I'll remember name: silas your owner.",
+      "createdAt": "2026-03-30T06:19:06.187Z"
+    },
+    {
+      "id": "message-mncssn62-q61mk3",
+      "role": "user",
+      "text": "/summary",
+      "createdAt": "2026-03-30T06:19:23.594Z"
+    },
+    {
+      "id": "message-mncssn63-ydqc0u",
+      "role": "assistant",
+      "text": "We have 7 user messages and 2 saved memoryies. Latest point: \"/summary\".",
+      "createdAt": "2026-03-30T06:19:23.595Z"
+    }
+  ]
+}

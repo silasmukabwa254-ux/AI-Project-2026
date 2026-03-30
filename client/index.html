@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Assistant 2026</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark">AI</div>
+        <div class="brand-copy">
+          <p class="eyebrow">Personal AI</p>
+          <h1>Assistant 2026</h1>
+          <p>Conversation first. Memory second.</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="ghost-button" id="settings-button" type="button">Settings</button>
+      </div>
+    </header>
+
+    <div class="workspace workspace--assistant">
+      <main class="stage stage--assistant">
+        <section class="assistant-intro panel">
+          <div class="assistant-intro-copy">
+            <p class="panel-kicker">Chat first</p>
+            <h2>Talk naturally.</h2>
+            <p class="intro-line">The assistant stays in conversation. Memory supports it quietly.</p>
+          </div>
+
+          <div class="assistant-intro-status">
+            <div>
+              <p class="panel-kicker">Live status</p>
+              <h3 id="status-title">Ready</h3>
+              <p class="intro-line" id="status-detail">Ready.</p>
+            </div>
+            <span class="status-chip status-chip--checking" id="sync-badge">Checking sync</span>
+          </div>
+        </section>
+
+        <section class="conversation-surface">
+          <header class="conversation-head">
+            <div>
+              <p class="panel-kicker">Chat</p>
+              <h2>Conversation</h2>
+            </div>
+            <div class="conversation-badges">
+              <span class="status-chip">Live</span>
+              <span class="status-chip">Private</span>
+            </div>
+          </header>
+
+          <section class="messages" id="messages" aria-live="polite"></section>
+
+          <form class="composer" id="composer">
+            <button class="icon-button" type="button" aria-label="Voice input">Mic</button>
+            <input id="message-input" name="message" type="text" placeholder="Type a message..." autocomplete="off">
+            <button class="primary-button" type="submit">Send</button>
+          </form>
+        </section>
+      </main>
+
+      <aside class="context-rail" aria-label="Secondary context">
+        <details class="panel panel--compact" open>
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Context</p>
+              <h2>Visible</h2>
+            </div>
+            <span class="panel-chip">Now</span>
+          </summary>
+          <div class="panel-content">
+            <p id="personality-note">Chat | Memory</p>
+          </div>
+        </details>
+
+        <details class="panel panel--compact">
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Memory</p>
+              <h2>Saved</h2>
+            </div>
+            <span class="panel-chip">Bank</span>
+          </summary>
+          <div class="panel-content">
+            <div class="list" id="memory-preview"></div>
+          </div>
+        </details>
+
+        <details class="panel panel--compact">
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Capture</p>
+              <h2>Note</h2>
+            </div>
+            <span class="panel-chip">Store</span>
+          </summary>
+          <div class="panel-content">
+            <p class="panel-note">Save a thought or update.</p>
+            <form class="mini-form" id="history-form">
+              <textarea id="history-input" name="history-input" rows="4" placeholder="Example: Layout done."></textarea>
+              <button class="primary-button" type="submit">Save</button>
+            </form>
+          </div>
+        </details>
+      </aside>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script src="./script.js"></script>
+</body>
+</html>

@@ -69,6 +69,14 @@ If you want the frontend on GitHub Pages and the backend on a separate host:
 
 The client will call `/state` and `/chat` through the configured backend URL instead of depending on the current page host.
 
+### Turn on Pages in GitHub
+
+1. Open the `AI-Project-2026` repo on GitHub.
+2. Go to `Settings` > `Pages`.
+3. Under `Build and deployment`, choose `GitHub Actions`.
+4. Push to `main` or run the `Deploy GitHub Pages` workflow from the `Actions` tab.
+5. Copy the Pages URL GitHub shows after the deployment finishes.
+
 ## Run it
 
 From the `ai-project-2026/server` folder:

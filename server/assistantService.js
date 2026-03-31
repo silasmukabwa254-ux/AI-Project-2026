@@ -261,12 +261,7 @@ function normalizeMessages(messages) {
 
       return {
         role,
-        content: [
-          {
-            type: "input_text",
-            text,
-          },
-        ],
+        content: text,
       };
     })
     .filter(Boolean);
@@ -369,12 +364,7 @@ function buildContextBlock(state, userMessage) {
 function buildInputMessages(state, userMessage, usePreviousResponse) {
   const developerMessage = {
     role: "developer",
-    content: [
-      {
-        type: "input_text",
-        text: buildContextBlock(state, userMessage),
-      },
-    ],
+    content: buildContextBlock(state, userMessage),
   };
 
   if (usePreviousResponse) {
@@ -384,12 +374,7 @@ function buildInputMessages(state, userMessage, usePreviousResponse) {
           developerMessage,
           {
             role: "user",
-            content: [
-              {
-                type: "input_text",
-                text,
-              },
-            ],
+            content: text,
           },
         ]
       : [developerMessage];

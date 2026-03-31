@@ -45,7 +45,7 @@ export function createInitialState() {
       {
         id: createId("message"),
         role: "assistant",
-        text: "Welcome to AI Project 2026. We can shape the layout first, then add intelligence.",
+        text: "Welcome to Elyra. We can shape the layout first, then add intelligence.",
         createdAt,
       },
     ],

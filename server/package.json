@@ -2,7 +2,7 @@
   "name": "ai-project-2026-server",
   "private": true,
   "version": "1.0.0",
-  "description": "SQLite-backed server for AI Project 2026",
+  "description": "SQLite-backed server for Elyra",
   "engines": {
     "node": ">=22.13.0"
   },

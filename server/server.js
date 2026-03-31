@@ -5,7 +5,7 @@ const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
 const { generateAssistantReply } = require("./assistantService");
 
-const APP_NAME = process.env.APP_NAME || "AI Project 2026";
+const APP_NAME = process.env.APP_NAME || "Elyra";
 const PORT = Number(process.env.PORT || 3001);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 const ROOT_DIR = path.resolve(__dirname, "..");
@@ -52,6 +52,13 @@ function safeText(value) {
   return String(value ?? "").trim();
 }
 
+function rewriteBrandingText(value) {
+  return safeText(value)
+    .replaceAll("AI Project 2026", "Elyra")
+    .replaceAll("AI Assistant 2026", "Elyra")
+    .replaceAll("Assistant 2026", "Elyra");
+}
+
 function getCorsHeaders() {
   return {
     "Access-Control-Allow-Origin": CORS_ORIGIN,
@@ -86,13 +93,13 @@ function createDefaultState() {
         updatedAt: now,
       },
     ],
-    history: [
-      {
-        id: createId("hist"),
-        title: "Workspace opened",
-        text: "AI Project 2026 started separate from blast.",
-        createdAt: now,
-      },
+      history: [
+        {
+          id: createId("hist"),
+          title: "Workspace opened",
+          text: "Elyra started separate from blast.",
+          createdAt: now,
+        },
     ],
     worldUpdates: [
       {
@@ -154,10 +161,10 @@ function normalizeState(raw) {
   const base = createDefaultState();
 
   if (!raw || typeof raw !== "object") {
-    return base;
+    return migrateBranding(base);
   }
 
-  return {
+  return migrateBranding({
     conversations: Array.isArray(raw.conversations) && raw.conversations.length ? raw.conversations : base.conversations,
     memories: Array.isArray(raw.memories) && raw.memories.length ? raw.memories : base.memories,
     history: Array.isArray(raw.history) && raw.history.length ? raw.history : base.history,
@@ -165,6 +172,34 @@ function normalizeState(raw) {
     worldTimeline: Array.isArray(raw.worldTimeline) && raw.worldTimeline.length ? raw.worldTimeline : base.worldTimeline,
     messages: Array.isArray(raw.messages) && raw.messages.length ? raw.messages : base.messages,
     activity: Array.isArray(raw.activity) && raw.activity.length ? raw.activity : base.activity,
+  });
+}
+
+function migrateBranding(state) {
+  const rewriteEntries = (entries, fields) =>
+    entries.map((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return entry;
+      }
+
+      const next = { ...entry };
+      for (const field of fields) {
+        if (typeof next[field] === "string") {
+          next[field] = rewriteBrandingText(next[field]);
+        }
+      }
+      return next;
+    });
+
+  return {
+    ...state,
+    conversations: rewriteEntries(state.conversations || [], ["title"]),
+    memories: rewriteEntries(state.memories || [], ["label", "value"]),
+    history: rewriteEntries(state.history || [], ["title", "text"]),
+    worldUpdates: rewriteEntries(state.worldUpdates || [], ["title", "text", "region", "source"]),
+    worldTimeline: rewriteEntries(state.worldTimeline || [], ["title", "text", "era", "source"]),
+    messages: rewriteEntries(state.messages || [], ["text"]),
+    activity: rewriteEntries(state.activity || [], ["title", "detail"]),
   };
 }
 

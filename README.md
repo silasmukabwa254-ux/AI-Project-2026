@@ -1,7 +1,7 @@
-# AI Project 2026
+# Elyra
 
-This is the clean workspace for the personal AI assistant project.
-The blast project stays untouched in the parent folder.
+Elyra is the personal AI assistant in this workspace.
+The repo name stays `AI Project 2026`, and the blast project stays untouched in the parent folder.
 
 ## Starter layout
 

@@ -46,6 +46,13 @@ function safeText(value) {
   return String(value ?? "").trim();
 }
 
+function rewriteBrandingText(value) {
+  return safeText(value)
+    .replaceAll("AI Project 2026", "Elyra")
+    .replaceAll("AI Assistant 2026", "Elyra")
+    .replaceAll("Assistant 2026", "Elyra");
+}
+
 function normalizeApiBaseUrl(value) {
   const text = safeText(value);
   if (!text) {
@@ -215,13 +222,13 @@ function createDefaultState() {
         updatedAt: now,
       },
     ],
-    history: [
-      {
-        id: createId("hist"),
-        title: "Workspace opened",
-        text: "AI Project 2026 started separate from blast.",
-        createdAt: now,
-      },
+      history: [
+        {
+          id: createId("hist"),
+          title: "Workspace opened",
+          text: "Elyra started separate from blast.",
+          createdAt: now,
+        },
     ],
     worldUpdates: [
       {
@@ -282,6 +289,51 @@ function createDefaultState() {
 function compactState(state) {
   const next = normalizeState(state);
 
+  next.conversations = next.conversations.map((conversation) => ({
+    ...conversation,
+    title: rewriteBrandingText(conversation.title),
+    summary: rewriteBrandingText(conversation.summary),
+  }));
+
+  next.memories = next.memories.map((memory) => ({
+    ...memory,
+    label: rewriteBrandingText(memory.label),
+    value: rewriteBrandingText(memory.value),
+  }));
+
+  next.history = next.history.map((entry) => ({
+    ...entry,
+    title: rewriteBrandingText(entry.title),
+    text: rewriteBrandingText(entry.text),
+  }));
+
+  next.worldUpdates = next.worldUpdates.map((entry) => ({
+    ...entry,
+    title: rewriteBrandingText(entry.title),
+    text: rewriteBrandingText(entry.text),
+    region: rewriteBrandingText(entry.region),
+    source: rewriteBrandingText(entry.source),
+  }));
+
+  next.worldTimeline = next.worldTimeline.map((entry) => ({
+    ...entry,
+    title: rewriteBrandingText(entry.title),
+    text: rewriteBrandingText(entry.text),
+    era: rewriteBrandingText(entry.era),
+    source: rewriteBrandingText(entry.source),
+  }));
+
+  next.messages = next.messages.map((message) => ({
+    ...message,
+    text: rewriteBrandingText(message.text),
+  }));
+
+  next.activity = next.activity.map((entry) => ({
+    ...entry,
+    title: rewriteBrandingText(entry.title),
+    detail: rewriteBrandingText(entry.detail),
+  }));
+
   const firstMemory = next.memories[0];
   if (firstMemory?.label === "Assistant tone") {
     firstMemory.value = "Calm. Grounded.";
@@ -295,7 +347,7 @@ function compactState(state) {
   const firstHistory = next.history[0];
   if (firstHistory?.text.includes("clean workspace separate from blast")) {
     firstHistory.title = "Workspace opened";
-    firstHistory.text = "AI Project 2026 started separate from blast.";
+    firstHistory.text = "Elyra started separate from blast.";
   }
 
   const firstWorld = next.worldUpdates[0];
@@ -338,7 +390,7 @@ function compactState(state) {
   const welcomeMessage = next.messages[0];
   if (
     welcomeMessage?.role === "assistant" &&
-    (welcomeMessage.text.includes("Welcome to AI Project 2026") || welcomeMessage.text.includes("Welcome. Use the panels."))
+    (welcomeMessage.text.includes("Welcome to Elyra") || welcomeMessage.text.includes("Welcome. Use the panels."))
   ) {
     welcomeMessage.text = "Hey. I'm here.";
   }
@@ -457,12 +509,12 @@ function loadState() {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return createDefaultState();
+      return compactState(createDefaultState());
     }
 
-    return normalizeState(JSON.parse(raw));
+    return compactState(JSON.parse(raw));
   } catch {
-    return createDefaultState();
+    return compactState(createDefaultState());
   }
 }
 

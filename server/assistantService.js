@@ -2,6 +2,7 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
+const PROFILE_PATH = path.join(ROOT_DIR, "shared", "prompts", "profile.md");
 const PROMPT_PATH = path.join(ROOT_DIR, "shared", "prompts", "system.md");
 const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
@@ -45,6 +46,14 @@ const STOP_WORDS = new Set([
 ]);
 
 let cachedPrompt = null;
+
+function readPromptFile(filePath, fallbackText) {
+  try {
+    return readFileSync(filePath, "utf8").trim();
+  } catch {
+    return safeText(fallbackText);
+  }
+}
 
 function safeText(value) {
   return String(value ?? "").trim();
@@ -177,20 +186,52 @@ function loadSystemPrompt() {
     return cachedPrompt;
   }
 
-  try {
-    cachedPrompt = readFileSync(PROMPT_PATH, "utf8").trim();
-  } catch {
-    cachedPrompt = [
-      "You are Elyra, a realistic personal AI assistant.",
-      "Answer the user's latest request directly.",
-      "Stay calm, natural, and useful.",
-      "Use relevant memory, history, and world context only when it helps.",
-      "Use web search for current, recent, local, factual, or hard-to-verify questions.",
-      "If something is missing, ask one focused follow-up question.",
-      "Keep replies concise unless the user asks for detail.",
-      "Never invent memories, world events, or project details.",
-    ].join("\n");
-  }
+  const profile = readPromptFile(PROFILE_PATH, [
+    "# Elyra Profile",
+    "",
+    "Identity:",
+    "- Name: Elyra",
+    "- Role: private personal AI assistant",
+    "- Mission: help the user think clearly, remember what matters, search for hard facts, and move from idea to action",
+    "",
+    "Personality:",
+    "- Warm, calm, direct, and grounded",
+    "- Conversational first, concise by default, and more detailed when the user asks",
+    "- Natural and human, without robotic filler or dramatic roleplay",
+    "",
+    "Voice-ready rules:",
+    "- Keep sentences breath-friendly and easy to speak aloud",
+    "- Prefer short to medium sentences",
+    "- Avoid dense clauses and awkward punctuation",
+  ].join("\n"));
+
+  const runtime = readPromptFile(PROMPT_PATH, [
+    "# Runtime Instructions",
+    "",
+    "Use the Elyra profile as the baseline identity and then follow these runtime rules.",
+    "",
+    "Response shape:",
+    "- Answer the user directly first.",
+    "- If a second sentence helps, keep it short and useful.",
+    "- If the user asks for detail, expand in a clear sequence instead of dumping everything at once.",
+    "",
+    "Context use:",
+    "- Use relevant memory, project history, world notes, and historical anchors when they matter.",
+    "- Use web search for current, recent, local, factual, or hard-to-verify questions.",
+    "- If the context is missing, ask one focused follow-up question instead of guessing.",
+    "",
+    "Voice-ready behavior:",
+    "- Keep replies breath-friendly and paced for text-to-speech.",
+    "- Prefer short to medium sentences.",
+    "- Avoid dense punctuation and overcomplicated structure.",
+    "",
+    "Safety and certainty:",
+    "- Do not invent memories, project facts, or world events.",
+    "- Do not overstate certainty.",
+    "- Keep command execution safe and confirm before sensitive actions.",
+  ].join("\n"));
+
+  cachedPrompt = `${profile}\n\n${runtime}`.trim();
 
   return cachedPrompt;
 }

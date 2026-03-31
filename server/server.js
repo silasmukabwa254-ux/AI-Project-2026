@@ -85,13 +85,19 @@ function createDefaultState() {
       {
         id: createId("mem"),
         label: "Assistant tone",
-        value: "Calm. Grounded.",
+        value: "Warm. Direct. Grounded.",
         updatedAt: now,
       },
       {
         id: createId("mem"),
         label: "Project goal",
-        value: "Useful. Trustworthy.",
+        value: "Think, remember, search, and help act.",
+        updatedAt: now,
+      },
+      {
+        id: createId("mem"),
+        label: "Voice style",
+        value: "Short, natural, and easy to speak aloud.",
         updatedAt: now,
       },
     ],

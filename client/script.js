@@ -214,13 +214,19 @@ function createDefaultState() {
       {
         id: createId("mem"),
         label: "Assistant tone",
-        value: "Calm. Grounded.",
+        value: "Warm. Direct. Grounded.",
         updatedAt: now,
       },
       {
         id: createId("mem"),
         label: "Project goal",
-        value: "Useful. Trustworthy.",
+        value: "Think, remember, search, and help act.",
+        updatedAt: now,
+      },
+      {
+        id: createId("mem"),
+        label: "Voice style",
+        value: "Short, natural, and easy to speak aloud.",
         updatedAt: now,
       },
     ],
@@ -737,16 +743,10 @@ function renderInspectorNote() {
     return;
   }
 
-  const latestHistory = state.history[0];
-  const latestMemory = state.memories[0];
-  const parts = ["Chat"];
+  const parts = ["Chat", "Memory", "Web", "Voice-ready"];
 
-  if (latestHistory) {
-    parts.push("Project");
-  }
-
-  if (latestMemory) {
-    parts.push("Memory");
+  if (state.history[0]) {
+    parts.splice(1, 0, "Project");
   }
 
   elements.personalityNote.textContent = parts.join(" | ");
@@ -1036,31 +1036,31 @@ function hasPattern(text, pattern) {
 }
 
 function buildGreetingReply() {
-  return "Hey. I'm here. What do you want to talk about?";
+  return "Hey. I'm here. Tell me what you want to work through.";
 }
 
 function buildCheckInReply() {
-  return "Good. Focused.";
+  return "Good. Steady and focused.";
 }
 
 function buildThanksReply() {
-  return "Any time.";
+  return "Any time. I'm with you.";
 }
 
 function buildIdentityReply() {
-  return "I'm your personal chat assistant.";
+  return "I'm Elyra, your private AI assistant. I help you think, remember, search, and plan.";
 }
 
 function buildHelpReply() {
-  return "Use /remember, /update, or /summary.";
+  return "I can chat, remember details, summarize context, check the web for hard questions, and keep your notes organized.";
 }
 
 function buildFarewellReply() {
-  return "Later.";
+  return "Talk soon.";
 }
 
 function buildAcknowledgementReply() {
-  return "Okay. What next?";
+  return "Got it. What should we do next?";
 }
 
 function handleCommand(text) {
@@ -1176,10 +1176,10 @@ function buildAssistantReply(text) {
   }
 
   const contextText = contextBits.length
-    ? "I remember your recent context."
-    : "Context ready";
+    ? "I've got your recent context."
+    : "Context ready.";
 
-  return `${contextText} What do you want to talk through?`;
+  return `${contextText} What do you want to work through next?`;
 }
 
 async function requestAssistantReply(text) {

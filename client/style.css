@@ -944,3 +944,145 @@ details.panel[open] > .panel-summary {
     width: 100%;
   }
 }
+
+/* Chat-first Elyra overrides */
+.assistant-intro {
+  display: none;
+}
+
+.workspace--assistant {
+  grid-template-columns: minmax(254px, 286px) minmax(0, 1fr);
+  grid-template-areas: "sidebar chat";
+  align-items: stretch;
+}
+
+.stage--assistant {
+  grid-area: chat;
+  min-height: 0;
+}
+
+.context-rail {
+  grid-area: sidebar;
+  position: sticky;
+  top: calc(clamp(0.75rem, 1.5vw, 1rem) + 6.8rem);
+  max-height: calc(100vh - 8.4rem);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.conversation-surface {
+  min-height: calc(100vh - 11rem);
+}
+
+.conversation-head {
+  margin-bottom: 0.15rem;
+}
+
+.conversation-badges {
+  display: none;
+}
+
+.assistant-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.8rem 0.95rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.assistant-status-copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.assistant-status-copy #status-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.assistant-status-copy #status-detail {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.messages {
+  padding: 0.15rem 0;
+}
+
+.message {
+  max-width: min(72%, 720px);
+  border-radius: 20px;
+}
+
+.message--assistant {
+  background: linear-gradient(180deg, rgba(214, 164, 93, 0.16), rgba(214, 164, 93, 0.08));
+}
+
+.message--user {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.composer {
+  border-color: rgba(214, 164, 93, 0.18);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.context-rail .panel {
+  padding: 0;
+}
+
+.context-rail .panel-summary {
+  padding: 0.9rem 0.95rem;
+}
+
+.context-rail .panel-content {
+  padding: 0.8rem 0.95rem 0.95rem;
+}
+
+.context-rail .panel h2 {
+  font-size: 0.98rem;
+}
+
+.context-rail .panel-note,
+.context-rail .feed-body,
+.context-rail #personality-note {
+  font-size: 0.92rem;
+}
+
+@media (max-width: 1180px) {
+  .workspace--assistant {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "chat"
+      "sidebar";
+  }
+
+  .stage--assistant,
+  .context-rail {
+    grid-area: auto;
+    position: static;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .conversation-surface {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .assistant-statusbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .message {
+    max-width: 100%;
+  }
+}

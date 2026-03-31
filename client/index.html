@@ -25,23 +25,6 @@
 
     <div class="workspace workspace--assistant">
       <main class="stage stage--assistant">
-        <section class="assistant-intro panel">
-          <div class="assistant-intro-copy">
-            <p class="panel-kicker">Chat first</p>
-            <h2>Talk naturally.</h2>
-            <p class="intro-line">Elyra stays in conversation. Memory supports it quietly.</p>
-          </div>
-
-          <div class="assistant-intro-status">
-            <div>
-              <p class="panel-kicker">Live status</p>
-              <h3 id="status-title">Ready</h3>
-              <p class="intro-line" id="status-detail">Ready.</p>
-            </div>
-            <span class="status-chip status-chip--checking" id="sync-badge">Checking sync</span>
-          </div>
-        </section>
-
         <section class="conversation-surface">
           <header class="conversation-head">
             <div>
@@ -54,6 +37,14 @@
             </div>
           </header>
 
+          <div class="assistant-statusbar" aria-label="Assistant status">
+            <div class="assistant-status-copy">
+              <span id="status-title">Ready</span>
+              <span id="status-detail">Ready.</span>
+            </div>
+            <span class="status-chip status-chip--checking" id="sync-badge">Checking sync</span>
+          </div>
+
           <section class="messages" id="messages" aria-live="polite"></section>
 
           <form class="composer" id="composer">
@@ -65,13 +56,13 @@
       </main>
 
       <aside class="context-rail" aria-label="Secondary context">
-        <details class="panel panel--compact" open>
+        <details class="panel panel--compact">
           <summary class="panel-summary">
             <div class="panel-summary-copy">
-              <p class="panel-kicker">Context</p>
-              <h2>Visible</h2>
+              <p class="panel-kicker">State</p>
+              <h2>Active</h2>
             </div>
-            <span class="panel-chip">Now</span>
+            <span class="panel-chip">Live</span>
           </summary>
           <div class="panel-content">
             <p id="personality-note">Chat | Memory</p>
@@ -82,9 +73,9 @@
           <summary class="panel-summary">
             <div class="panel-summary-copy">
               <p class="panel-kicker">Memory</p>
-              <h2>Saved</h2>
+              <h2>Recent</h2>
             </div>
-            <span class="panel-chip">Bank</span>
+            <span class="panel-chip">Saved</span>
           </summary>
           <div class="panel-content">
             <div class="list" id="memory-preview"></div>
@@ -94,8 +85,8 @@
         <details class="panel panel--compact">
           <summary class="panel-summary">
             <div class="panel-summary-copy">
-              <p class="panel-kicker">Capture</p>
-              <h2>Note</h2>
+              <p class="panel-kicker">Notes</p>
+              <h2>Quick</h2>
             </div>
             <span class="panel-chip">Store</span>
           </summary>

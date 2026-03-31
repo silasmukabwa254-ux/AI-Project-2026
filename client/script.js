@@ -1040,7 +1040,7 @@ function buildGreetingReply() {
 }
 
 function buildCheckInReply() {
-  return "Good. Steady and focused.";
+  return "Good. Steady and ready.";
 }
 
 function buildThanksReply() {
@@ -1048,11 +1048,11 @@ function buildThanksReply() {
 }
 
 function buildIdentityReply() {
-  return "I'm Elyra, your private AI assistant. I help you think, remember, search, and plan.";
+  return "I'm Elyra, your AI assistant. I can answer questions, explain ideas, help you write, plan, code, search the web, and remember useful context.";
 }
 
 function buildHelpReply() {
-  return "I can chat, remember details, summarize context, check the web for hard questions, and keep your notes organized.";
+  return "I can answer questions, explain ideas, help you write, plan, code, search the web, and remember useful context.";
 }
 
 function buildFarewellReply() {
@@ -1176,10 +1176,10 @@ function buildAssistantReply(text) {
   }
 
   const contextText = contextBits.length
-    ? "I've got your recent context."
-    : "Context ready.";
+    ? "I can use your recent context if it helps."
+    : "Ready for anything.";
 
-  return `${contextText} What do you want to work through next?`;
+  return `${contextText} Ask me anything.`;
 }
 
 async function requestAssistantReply(text) {

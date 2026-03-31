@@ -205,7 +205,7 @@ function migrateBranding(state) {
 
   return {
     ...state,
-    conversations: rewriteEntries(state.conversations || [], ["title"]),
+    conversations: rewriteEntries(state.conversations || [], ["title", "summary"]),
     memories: rewriteEntries(state.memories || [], ["label", "value"]),
     history: rewriteEntries(state.history || [], ["title", "text"]),
     worldUpdates: rewriteEntries(state.worldUpdates || [], ["title", "text", "region", "source"]),

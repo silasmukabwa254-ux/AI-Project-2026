@@ -841,6 +841,26 @@ function syncConversationTitle(text) {
   }
 }
 
+function syncConversationSummary(role, text) {
+  const conversation = state.conversations[0];
+  if (!conversation) {
+    return;
+  }
+
+  const value = safeText(text);
+  if (!value) {
+    return;
+  }
+
+  const prefix = role === "assistant" ? "Elyra" : "User";
+  const next = conversation.summary && conversation.summary !== "Conversation first."
+    ? `${conversation.summary} | ${prefix}: ${value}`
+    : `${prefix}: ${value}`;
+
+  conversation.summary = truncate(next, 180);
+  conversation.updatedAt = nowIso();
+}
+
 function syncConversationResponseId(responseId) {
   const conversation = state.conversations[0];
   if (!conversation) {
@@ -867,6 +887,8 @@ function addMessage(role, text, extra = {}) {
   } else if (role === "assistant") {
     syncConversationResponseId("");
   }
+
+  syncConversationSummary(role, value);
 
   state.messages.push(message);
 
@@ -906,6 +928,28 @@ function addHistoryEntry(text, source = "manual") {
 
   state.history = state.history.slice(0, 8);
   recordActivity("history", "Project saved", `${source}: ${truncate(value, 90)}`);
+}
+
+function captureMemoryFromText(text) {
+  const value = safeText(text);
+  const rules = [
+    { label: "Name", pattern: /\bmy name is\s+(.+?)(?:[.?!,;]|$)/i },
+    { label: "Preference", pattern: /\bi (?:like|love|prefer|enjoy)\s+(.+?)(?:[.?!,;]|$)/i },
+    { label: "Identity", pattern: /\bi (?:work as|am a|am an|study|live in|live at)\s+(.+?)(?:[.?!,;]|$)/i },
+    { label: "Important", pattern: /\bremember that\s+(.+?)(?:[.?!,;]|$)/i },
+  ];
+
+  for (const rule of rules) {
+    const match = value.match(rule.pattern);
+    if (match && safeText(match[1])) {
+      return {
+        label: rule.label,
+        value: match[1].trim(),
+      };
+    }
+  }
+
+  return null;
 }
 
 function addWorldUpdateEntry(text, region = "Global", source = "manual") {
@@ -1245,6 +1289,10 @@ async function handleSubmit(event) {
 
   elements.messageInput.value = "";
   addMessage("user", text);
+  const memoryCapture = captureMemoryFromText(text);
+  if (memoryCapture) {
+    addMemoryEntry(memoryCapture.value, memoryCapture.label);
+  }
 
   const commandReply = handleCommand(text);
   if (commandReply) {

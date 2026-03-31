@@ -185,6 +185,7 @@ function loadSystemPrompt() {
       "Answer the user's latest request directly.",
       "Stay calm, natural, and useful.",
       "Use relevant memory, history, and world context only when it helps.",
+      "Use web search for current, recent, local, factual, or hard-to-verify questions.",
       "If something is missing, ask one focused follow-up question.",
       "Keep replies concise unless the user asks for detail.",
       "Never invent memories, world events, or project details.",
@@ -397,6 +398,13 @@ async function generateAssistantReply({ state, userMessage }) {
       instructions: loadSystemPrompt(),
       previous_response_id: continuity.usePreviousResponse ? continuity.responseId : undefined,
       input: buildInputMessages(state, userMessage, continuity.usePreviousResponse),
+      tools: [
+        {
+          type: "web_search",
+          search_context_size: "medium",
+        },
+      ],
+      tool_choice: "auto",
       reasoning: {
         effort: DEFAULT_REASONING_EFFORT,
       },

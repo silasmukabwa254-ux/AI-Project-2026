@@ -737,18 +737,13 @@ async function syncStateToServer() {
       body: JSON.stringify({ state }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Sync failed with status ${response.status}`);
-    }
+      if (!response.ok) {
+        throw new Error(`Sync failed with status ${response.status}`);
+      }
 
-    const payload = await response.json().catch(() => null);
-    if (payload?.state) {
-      state = normalizeState(payload.state);
-      saveState();
-      renderAll();
-    }
+      await response.json().catch(() => null);
 
-    syncStatus = "online";
+      syncStatus = "online";
   } catch {
     syncStatus = "offline";
   } finally {

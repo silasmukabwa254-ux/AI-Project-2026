@@ -1,8 +1,8 @@
 {
-  "name": "ai-project-2026",
+  "name": "elyra",
   "private": true,
   "version": "1.0.0",
-  "description": "Standalone AI Project 2026 frontend and backend workspace",
+  "description": "Standalone Elyra frontend and backend workspace",
   "engines": {
     "node": ">=22.13.0"
   },

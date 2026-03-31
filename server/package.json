@@ -1,5 +1,5 @@
 {
-  "name": "ai-project-2026-server",
+  "name": "elyra-server",
   "private": true,
   "version": "1.0.0",
   "description": "SQLite-backed server for Elyra",

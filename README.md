@@ -1,12 +1,12 @@
 # Elyra
 
 Elyra is the personal AI assistant in this workspace.
-The repo name stays `AI Project 2026`, and the blast project stays untouched in the parent folder.
+The local workspace is branded Elyra, and the blast project stays untouched in the parent folder.
 
 ## Starter layout
 
 ```text
-ai-project-2026/
+Elyra/
   client/
     index.html
     style.css
@@ -61,7 +61,7 @@ When `OPENAI_API_KEY` is set, normal chat messages go through the `/chat` route 
 
 If you want the frontend on GitHub Pages and the backend on a separate host:
 
-1. Make `ai-project-2026` its own GitHub repository, or move these files into a separate repo before enabling Pages.
+1. Make this Elyra workspace its own GitHub repository, or move these files into a separate repo before enabling Pages.
 2. Deploy the backend to a Node host such as Render, Railway, or Fly.
 3. Set the backend URL in `client/config.js`, or open the in-app `Settings` button once the site is live and save the backend URL there.
 4. Make sure the backend is reachable over HTTPS.
@@ -71,7 +71,7 @@ The client will call `/state` and `/chat` through the configured backend URL ins
 
 ### Turn on Pages in GitHub
 
-1. Open the `AI-Project-2026` repo on GitHub.
+1. Open the Elyra repo on GitHub.
 2. Go to `Settings` > `Pages`.
 3. Under `Build and deployment`, choose `GitHub Actions`.
 4. Push to `main` or run the `Deploy GitHub Pages` workflow from the `Actions` tab.
@@ -79,7 +79,7 @@ The client will call `/state` and `/chat` through the configured backend URL ins
 
 ## Run it
 
-From the `ai-project-2026/server` folder:
+From the `Elyra/server` folder:
 
 ```powershell
 npm start

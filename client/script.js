@@ -205,6 +205,8 @@ function createDefaultState() {
       {
         id: createId("conv"),
         title: "New chat",
+        summary: "Conversation first.",
+        lastResponseId: "",
         updatedAt: now,
       },
     ],
@@ -417,6 +419,8 @@ function normalizeConversation(item) {
   return {
     id: safeText(item?.id) || createId("conv"),
     title: safeText(item?.title) || "New chat",
+    summary: safeText(item?.summary) || "",
+    lastResponseId: safeText(item?.lastResponseId) || "",
     updatedAt: safeText(item?.updatedAt) || nowIso(),
   };
 }
@@ -469,11 +473,14 @@ function normalizeWorldTimeline(item) {
 }
 
 function normalizeMessage(item) {
+  const responseId = safeText(item?.responseId);
+
   return {
     id: safeText(item?.id) || createId("msg"),
     role: item?.role === "user" ? "user" : "assistant",
     text: safeText(item?.text),
     createdAt: safeText(item?.createdAt) || nowIso(),
+    ...(responseId ? { responseId } : {}),
   };
 }
 
@@ -834,15 +841,34 @@ function syncConversationTitle(text) {
   }
 }
 
-function addMessage(role, text) {
-  const value = safeText(text);
+function syncConversationResponseId(responseId) {
+  const conversation = state.conversations[0];
+  if (!conversation) {
+    return;
+  }
 
-  state.messages.push({
+  conversation.lastResponseId = safeText(responseId);
+  conversation.updatedAt = nowIso();
+}
+
+function addMessage(role, text, extra = {}) {
+  const value = safeText(text);
+  const responseId = safeText(extra?.responseId);
+  const message = {
     id: createId("msg"),
     role,
     text: value,
     createdAt: nowIso(),
-  });
+  };
+
+  if (role === "assistant" && responseId) {
+    message.responseId = responseId;
+    syncConversationResponseId(responseId);
+  } else if (role === "assistant") {
+    syncConversationResponseId("");
+  }
+
+  state.messages.push(message);
 
   if (role === "user") {
     syncConversationTitle(value);
@@ -1141,7 +1167,14 @@ async function requestAssistantReply(text) {
     throw new Error("Assistant returned an empty reply");
   }
 
-  return reply;
+  return {
+    reply,
+    meta: {
+      model: safeText(payload?.meta?.model),
+      reasoningEffort: safeText(payload?.meta?.reasoningEffort),
+      responseId: safeText(payload?.meta?.responseId),
+    },
+  };
 }
 
 function handleHistorySubmit(event) {
@@ -1220,8 +1253,8 @@ async function handleSubmit(event) {
   }
 
   try {
-    const reply = await requestAssistantReply(text);
-    addMessage("assistant", reply);
+    const assistantResult = await requestAssistantReply(text);
+    addMessage("assistant", assistantResult.reply, { responseId: assistantResult.meta.responseId });
   } catch {
     window.setTimeout(() => {
       addMessage("assistant", buildAssistantReply(text));

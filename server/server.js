@@ -76,6 +76,8 @@ function createDefaultState() {
       {
         id: createId("conv"),
         title: "New chat",
+        summary: "Conversation first.",
+        lastResponseId: "",
         updatedAt: now,
       },
     ],
@@ -173,6 +175,16 @@ function normalizeState(raw) {
     messages: Array.isArray(raw.messages) && raw.messages.length ? raw.messages : base.messages,
     activity: Array.isArray(raw.activity) && raw.activity.length ? raw.activity : base.activity,
   });
+}
+
+function normalizeConversation(item) {
+  return {
+    id: safeText(item?.id) || createId("conv"),
+    title: safeText(item?.title) || "New chat",
+    summary: safeText(item?.summary) || "",
+    lastResponseId: safeText(item?.lastResponseId) || "",
+    updatedAt: safeText(item?.updatedAt) || nowIso(),
+  };
 }
 
 function migrateBranding(state) {
@@ -441,7 +453,7 @@ async function handleChat(req, res) {
       });
     }
 
-    const reply = await generateAssistantReply({ state: nextState });
+    const reply = await generateAssistantReply({ state: nextState, userMessage: message });
 
     sendJson(res, 200, {
       ok: true,
@@ -449,6 +461,7 @@ async function handleChat(req, res) {
       meta: {
         model: reply.model,
         reasoningEffort: reply.reasoningEffort,
+        responseId: reply.responseId,
       },
     });
   } catch (error) {

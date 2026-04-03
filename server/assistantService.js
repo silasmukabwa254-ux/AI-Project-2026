@@ -9,9 +9,11 @@ const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
 const DEFAULT_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT || "medium";
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 12000);
 const ASSISTANT_PROVIDER = safeText(process.env.ASSISTANT_PROVIDER).toLowerCase();
-const LOCAL_MODEL_NAME = safeText(process.env.LOCAL_MODEL_NAME) || "llama3.2";
+const LOCAL_MODEL_NAME = safeText(process.env.LOCAL_MODEL_NAME) || "llama3.2:1b";
 const LOCAL_MODEL_URL = safeText(process.env.LOCAL_MODEL_URL) || "http://127.0.0.1:11434/api/chat";
-const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS || 120000);
+const LOCAL_MODEL_TAGS_URL = new URL("./tags", LOCAL_MODEL_URL).toString();
+const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS || 30000);
+const LOCAL_MODEL_CHECK_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_CHECK_TIMEOUT_MS || 5000);
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -394,10 +396,10 @@ function buildInputMessages(state, userMessage, usePreviousResponse) {
 function buildLocalInputMessages(state, userMessage) {
   const systemMessage = {
     role: "system",
-    content: `${loadSystemPrompt()}\n\n${buildContextBlock(state, userMessage)}`,
+    content: buildContextBlock(state, userMessage),
   };
 
-  const recentMessages = normalizeMessages(Array.isArray(state?.messages) ? state.messages.slice(-12) : []);
+  const recentMessages = normalizeMessages(Array.isArray(state?.messages) ? state.messages.slice(-6) : []);
   return [systemMessage, ...recentMessages];
 }
 
@@ -491,6 +493,47 @@ async function generateOpenAIReply({ state, userMessage }) {
 }
 
 async function generateLocalReply({ state, userMessage }) {
+  const preflightController = new AbortController();
+  const preflightTimeoutId = setTimeout(() => preflightController.abort(), LOCAL_MODEL_CHECK_TIMEOUT_MS);
+
+  try {
+    const tagsResponse = await fetch(LOCAL_MODEL_TAGS_URL, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+      },
+      signal: preflightController.signal,
+    });
+
+    const tagsPayload = await tagsResponse.json().catch(() => null);
+    if (!tagsResponse.ok) {
+      const message = safeText(tagsPayload?.error || tagsPayload?.message) || `Local model check failed with status ${tagsResponse.status}`;
+      throw new Error(message);
+    }
+
+    const models = Array.isArray(tagsPayload?.models) ? tagsPayload.models : [];
+    const hasRequestedModel = models.some((model) => {
+      const name = safeText(model?.name || model?.model);
+      return name === LOCAL_MODEL_NAME;
+    });
+
+    if (!hasRequestedModel) {
+      throw new Error(
+        `Local model ${LOCAL_MODEL_NAME} is not ready yet. Wait for Ollama to finish pulling it, or run: ollama pull ${LOCAL_MODEL_NAME}`,
+      );
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(
+        `Local model check timed out. Make sure Ollama is running and ${LOCAL_MODEL_NAME} is pulled.`,
+      );
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(preflightTimeoutId);
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), LOCAL_MODEL_TIMEOUT_MS);
 

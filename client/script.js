@@ -1317,7 +1317,7 @@ async function handleSubmit(event) {
     if (message.includes("ollama") || message.includes("local model")) {
       addMessage(
         "assistant",
-        "I’m ready to run locally, but the Ollama model server is not available yet. Start Ollama and pull a model such as llama3.2, then try again.",
+        "I’m ready to run locally, but the Ollama model server is not available yet. Start Ollama and pull a smaller model such as llama3.2:1b, then try again.",
       );
       recordActivity("system", "Local model unavailable", "Ollama is not running or the model is missing.");
       return;

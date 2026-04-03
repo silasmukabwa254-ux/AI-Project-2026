@@ -1303,7 +1303,17 @@ async function handleSubmit(event) {
   try {
     const assistantResult = await requestAssistantReply(text);
     addMessage("assistant", assistantResult.reply, { responseId: assistantResult.meta.responseId });
-  } catch {
+  } catch (error) {
+    const message = safeText(error?.message).toLowerCase();
+    if (message.includes("quota") || message.includes("billing")) {
+      addMessage(
+        "assistant",
+        "I’m temporarily unable to answer because the OpenAI quota is exhausted. Once billing or credits are restored, I’ll answer normally.",
+      );
+      recordActivity("system", "OpenAI quota exhausted", "Backend is online, but the model cannot answer yet.");
+      return;
+    }
+
     window.setTimeout(() => {
       addMessage("assistant", buildAssistantReply(text));
     }, 250);

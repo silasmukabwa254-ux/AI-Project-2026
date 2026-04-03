@@ -1,5 +1,7 @@
-// Set this to your hosted backend URL before publishing to GitHub Pages.
-// Leave it blank for local development on localhost.
+const isLocalHost = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
+// Use localhost automatically during local development.
+// The hosted backend URL remains the default for GitHub Pages.
 window.AI_PROJECT_CONFIG = window.AI_PROJECT_CONFIG || {
-  apiBaseUrl: "https://ai-project-2026-production.up.railway.app",
+  apiBaseUrl: isLocalHost ? "" : "https://ai-project-2026-production.up.railway.app",
 };

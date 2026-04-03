@@ -8,6 +8,10 @@ const OPENAI_API_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
 const DEFAULT_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT || "medium";
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 12000);
+const ASSISTANT_PROVIDER = safeText(process.env.ASSISTANT_PROVIDER).toLowerCase();
+const LOCAL_MODEL_NAME = safeText(process.env.LOCAL_MODEL_NAME) || "llama3.2";
+const LOCAL_MODEL_URL = safeText(process.env.LOCAL_MODEL_URL) || "http://127.0.0.1:11434/api/chat";
+const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS || 120000);
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -387,6 +391,16 @@ function buildInputMessages(state, userMessage, usePreviousResponse) {
   ];
 }
 
+function buildLocalInputMessages(state, userMessage) {
+  const systemMessage = {
+    role: "system",
+    content: `${loadSystemPrompt()}\n\n${buildContextBlock(state, userMessage)}`,
+  };
+
+  const recentMessages = normalizeMessages(Array.isArray(state?.messages) ? state.messages.slice(-12) : []);
+  return [systemMessage, ...recentMessages];
+}
+
 function extractResponseText(payload) {
   if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
     return payload.output_text.trim();
@@ -412,7 +426,15 @@ function extractResponseText(payload) {
   return parts.join("\n").trim();
 }
 
-async function generateAssistantReply({ state, userMessage }) {
+function getAssistantProvider() {
+  if (ASSISTANT_PROVIDER === "openai" || ASSISTANT_PROVIDER === "ollama") {
+    return ASSISTANT_PROVIDER;
+  }
+
+  return safeText(process.env.OPENAI_API_KEY) ? "openai" : "ollama";
+}
+
+async function generateOpenAIReply({ state, userMessage }) {
   const apiKey = safeText(process.env.OPENAI_API_KEY);
   if (!apiKey) {
     throw new Error("OPENAI_API_KEY is not configured");
@@ -466,6 +488,67 @@ async function generateAssistantReply({ state, userMessage }) {
     reasoningEffort: DEFAULT_REASONING_EFFORT,
     responseId: safeText(payload?.id),
   };
+}
+
+async function generateLocalReply({ state, userMessage }) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), LOCAL_MODEL_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(LOCAL_MODEL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: LOCAL_MODEL_NAME,
+        messages: buildLocalInputMessages(state, userMessage),
+        stream: false,
+        options: {
+          temperature: 0.7,
+        },
+      }),
+    });
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      const message = safeText(payload?.error || payload?.message) || `Local model request failed with status ${response.status}`;
+      throw new Error(message);
+    }
+
+    const reply = safeText(payload?.message?.content || payload?.response || payload?.output_text || payload?.reply);
+    if (!reply) {
+      throw new Error("Local model returned an empty assistant reply");
+    }
+
+    return {
+      reply,
+      model: LOCAL_MODEL_NAME,
+      reasoningEffort: "local",
+      responseId: safeText(payload?.id),
+    };
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error(`Local model timed out. Start Ollama and make sure ${LOCAL_MODEL_NAME} is available.`);
+    }
+
+    throw new Error(
+      `Local model unavailable at ${LOCAL_MODEL_URL}. Start Ollama and pull ${LOCAL_MODEL_NAME} before chatting.`,
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function generateAssistantReply({ state, userMessage }) {
+  const provider = getAssistantProvider();
+  if (provider === "ollama") {
+    return generateLocalReply({ state, userMessage });
+  }
+
+  return generateOpenAIReply({ state, userMessage });
 }
 
 module.exports = {

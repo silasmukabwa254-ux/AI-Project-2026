@@ -28,8 +28,9 @@ Elyra/
 2. Wire the message composer.
 3. Add a memory, project history, world updates, and activity feed.
 4. Sync every state change to SQLite.
-5. Add the OpenAI chat bridge so the assistant replies with a real model.
-6. Keep voice, commands, and richer AI behavior for the next pass.
+5. Add the OpenAI chat bridge so the assistant can use a paid cloud model later.
+6. Keep a local Ollama mode available so Elyra can run privately on your machine for now.
+7. Keep voice, commands, and richer AI behavior for the next pass.
 
 ## Project goal
 
@@ -46,7 +47,7 @@ Build a realistic personal AI assistant that feels natural, remembers useful thi
 
 Every major action also appears in the live activity feed so you can see the app update step by step.
 
-When `OPENAI_API_KEY` is set, normal chat messages go through the `/chat` route and use `gpt-5.4` by default. If the key is missing, the app falls back to the local reply engine so you can still test the UI.
+When `OPENAI_API_KEY` is set, normal chat messages go through the `/chat` route and use `gpt-5.4` by default. If the key is missing, Elyra switches to the local Ollama path so you can keep using the assistant privately on your own machine.
 
 ## How it works now
 
@@ -77,7 +78,7 @@ The client will call `/state` and `/chat` through the configured backend URL ins
 4. Push to `main` or run the `Deploy GitHub Pages` workflow from the `Actions` tab.
 5. Copy the Pages URL GitHub shows after the deployment finishes.
 
-## Run it
+## Run it locally
 
 From the `Elyra/server` folder:
 
@@ -89,7 +90,11 @@ Then open `http://localhost:3001`.
 
 If you want one-click startup on Windows, run `start-ai-project.bat` from the project root. It starts the server and opens the browser automatically.
 
-To use the real AI replies, set `OPENAI_API_KEY` in your environment or `.env` file before starting the server.
+For the private local mode, install Ollama, pull a model such as `llama3.2`, and leave `OPENAI_API_KEY` empty. The backend will use the local model automatically.
+
+To switch back to the cloud model later, set `OPENAI_API_KEY` in your environment or `.env` file before starting the server.
+
+On Windows, Ollama can be installed with the official installer or by running `irm https://ollama.com/install.ps1 | iex` in PowerShell. After install, the API runs on `http://localhost:11434`.
 
 ## Deployment notes
 

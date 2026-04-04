@@ -380,7 +380,7 @@ function shouldPreferWebSummary(query) {
     return false;
   }
 
-  return /(\bbrief about\b|\bgive me a brief\b|\btell me about\b|\bwhat happened\b|\bwhat occurred\b|\bwhat took place\b|\bwhat went on\b|\bwhat is\b|\bwho is\b|\bexplain\b|\bwhy is\b|\bwhy are\b|\bhow does\b|\bhow did\b|\bwhen did\b|\bwhat was\b|\bsummary of\b|\btravel\b|\btourism\b|\bvisit\b|\bcountry\b|\bcity\b|\bcapital\b|\bhistory of\b|\bhistorical\b|\bbible\b|\bjesus\b|\bnews about\b|\blatest on\b|\bwhat's happening\b|\bwhat is happening\b)/i.test(
+  return /(\bbrief about\b|\bgive me a brief\b|\btell me about\b|\bwhat happened\b|\bwhat occurred\b|\bwhat took place\b|\bwhat went on\b|\bwhat is\b|\bwho is\b|\bexplain\b|\bwhy is\b|\bwhy are\b|\bhow does\b|\bhow did\b|\bwhen did\b|\bwhat was\b|\bsummary of\b|\btravel\b|\btourism\b|\bvisit\b|\bcountry\b|\bcity\b|\bcapital\b|\bhistory of\b|\bhistorical\b|\bbible\b|\bjesus\b|\bnews about\b|\blatest on\b|\bwhat's happening\b|\bwhat is happening\b|\bgoal tally\b|\bgoals\b|\bgoal\b|\bstats\b|\brecord\b|\bstandings\b|\bpoints\b|\bleague\b|\bmatch\b|\bmatches\b|\bfixture\b|\bfixtures\b|\btable\b|\branking\b|\brank\b|\bteam\b|\bplayer\b|\bplayers\b|\bclub\b|\bseason\b|\btransfer\b|\bappearances\b|\bassists\b|\bcaps\b)/i.test(
     normalized,
   );
 }

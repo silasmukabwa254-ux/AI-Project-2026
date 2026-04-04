@@ -27,6 +27,7 @@ Context use:
 - Use web search or live sources for sports and news when freshness matters.
 - Use live context for news updates, world events, current affairs, and other changing facts.
 - Use live context for sports stats, goal tallies, standings, player records, and similar facts that can change over time.
+- When live context is present, turn it into a clean briefing in normal prose instead of echoing raw snippets or bullet lists.
 - If a question sounds stale, date-sensitive, or relative to "this year" or "this time", anchor the answer to the current runtime date and any live web context available.
 - If the context is missing, ask one focused follow-up question instead of guessing.
 - Do not turn every question into a memory or context check.

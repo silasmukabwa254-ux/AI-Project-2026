@@ -701,6 +701,7 @@ function buildContextBlock(state, userMessage, options = {}) {
         "Relevant live web context:",
         ...webLines.map((line) => `- ${line}`),
         "Use this live context for current events, sports, news, and factual lookups. Prefer it over memory when they conflict.",
+        "When you answer from live context, synthesize it into a short briefing. Do not echo raw snippets or list bullet points unless the user asks for sources.",
       ].join("\n"),
     );
   }
@@ -739,6 +740,7 @@ function buildLocalContextBlock(state, userMessage, webLines = []) {
         "Relevant live web context:",
         ...webLines.map((line) => `- ${line}`),
         "Use this live context for current events, sports, news, and factual lookups. Prefer it over memory when they conflict.",
+        "When you answer from live context, synthesize it into a short briefing. Do not echo raw snippets or list bullet points unless the user asks for sources.",
       ].join("\n"),
     );
   }
@@ -756,8 +758,17 @@ function buildWebFallbackReply(userMessage, webLines) {
   }
 
   const topic = safeText(userMessage);
-  const intro = topic ? `I found some live context for "${truncate(topic, 80)}":` : "I found some live context:";
-  return [intro, ...lines.map((line) => `- ${line}`), "If you want, I can narrow this down or turn it into a cleaner summary."].join("\n");
+  const intro = topic ? `Here’s the latest on ${truncate(topic, 80)}.` : "Here’s the latest update.";
+  const body = lines
+    .map((line) => line.replace(/\s*\((https?:\/\/[^)]+)\)\s*$/, "").replace(/^[-•]\s*/, "").trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const clean = line.replace(/\s+/g, " ").trim();
+      return index === 0 ? clean : clean.replace(/^./, (character) => character.toLowerCase());
+    })
+    .join(" ");
+
+  return `${intro} ${body}${body.endsWith(".") ? "" : "."} If you want, I can narrow it to a shorter briefing or focus on one angle.`;
 }
 
 function buildInputMessages(state, userMessage, usePreviousResponse) {

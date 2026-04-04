@@ -70,6 +70,8 @@ If you want the frontend on GitHub Pages and the backend on a separate host:
 
 The client will call `/state` and `/chat` through the configured backend URL instead of depending on the current page host.
 
+For private local use, the frontend now defaults to `http://localhost:3001`, so the GitHub Pages site can talk to the Elyra server running on your own machine. In that mode, GitHub Pages is just the UI, while your local server and Ollama handle the intelligence.
+
 ### Turn on Pages in GitHub
 
 1. Open the Elyra repo on GitHub.

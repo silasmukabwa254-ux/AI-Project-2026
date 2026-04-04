@@ -119,7 +119,7 @@ function setConfiguredApiBaseUrl(value) {
 
 function buildApiUrl(path) {
   const base = getConfiguredApiBaseUrl();
-  if (!base || (isRemotePage() && isLocalApiBaseUrl(base))) {
+  if (!base) {
     return null;
   }
 
@@ -128,25 +128,11 @@ function buildApiUrl(path) {
 }
 
 function hasRemoteBackendConfigured() {
-  const base = getConfiguredApiBaseUrl();
-  if (!base) {
-    return false;
-  }
-
-  return !(isRemotePage() && isLocalApiBaseUrl(base));
+  return Boolean(getConfiguredApiBaseUrl());
 }
 
 function getBackendHint() {
-  const base = getConfiguredApiBaseUrl();
-  if (!base) {
-    return "Set backend URL in Settings.";
-  }
-
-  if (!hasRemoteBackendConfigured()) {
-    return "Backend URL points to localhost.";
-  }
-
-  return "";
+  return hasRemoteBackendConfigured() ? "" : "Set backend URL in Settings.";
 }
 
 function escapeHtml(value) {
@@ -1258,7 +1244,7 @@ function handleWorldSubmit(event) {
 function handleSettingsClick() {
   const currentValue = getConfiguredApiBaseUrl();
   const nextValue = window.prompt(
-    "Enter the backend URL for this AI assistant.\nUse the hosted backend URL, such as https://your-backend.onrender.com\nLeave blank to clear it.",
+    "Enter the backend URL for this AI assistant.\nLeave blank to use the local Elyra server at http://localhost:3001.\nUse a hosted backend URL later if you switch back to cloud mode.",
     currentValue,
   );
 

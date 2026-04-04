@@ -90,7 +90,7 @@ Then open `http://localhost:3001`.
 
 If you want one-click startup on Windows, run `start-ai-project.bat` from the project root. It starts the server and opens the browser automatically.
 
-For the private local mode, install Ollama, pull a model such as `llama3.2:1b`, and leave `OPENAI_API_KEY` empty. The backend will use the local model automatically.
+For the private local mode, install Ollama, pull a model such as `llama3.2:1b`, and leave `OPENAI_API_KEY` empty. The backend will use the local model automatically and can fall back to any already-installed Ollama model, including `llama3.2:latest`, if the smaller one is still pulling.
 
 To switch back to the cloud model later, set `OPENAI_API_KEY` in your environment or `.env` file before starting the server.
 

@@ -14,6 +14,7 @@ const LOCAL_MODEL_URL = safeText(process.env.LOCAL_MODEL_URL) || "http://127.0.0
 const LOCAL_MODEL_TAGS_URL = new URL("./tags", LOCAL_MODEL_URL).toString();
 const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS || 30000);
 const LOCAL_MODEL_CHECK_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_CHECK_TIMEOUT_MS || 5000);
+const LOCAL_MODEL_PREFERENCES = [LOCAL_MODEL_NAME, "llama3.2:latest", "llama3.2:1b"].filter(Boolean);
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -495,6 +496,7 @@ async function generateOpenAIReply({ state, userMessage }) {
 async function generateLocalReply({ state, userMessage }) {
   const preflightController = new AbortController();
   const preflightTimeoutId = setTimeout(() => preflightController.abort(), LOCAL_MODEL_CHECK_TIMEOUT_MS);
+  let selectedModelName = LOCAL_MODEL_NAME;
 
   try {
     const tagsResponse = await fetch(LOCAL_MODEL_TAGS_URL, {
@@ -512,20 +514,21 @@ async function generateLocalReply({ state, userMessage }) {
     }
 
     const models = Array.isArray(tagsPayload?.models) ? tagsPayload.models : [];
-    const hasRequestedModel = models.some((model) => {
-      const name = safeText(model?.name || model?.model);
-      return name === LOCAL_MODEL_NAME;
-    });
+    const modelNames = models.map((model) => safeText(model?.name || model?.model)).filter(Boolean);
+    selectedModelName =
+      LOCAL_MODEL_PREFERENCES.find((candidate) => modelNames.includes(candidate)) ||
+      modelNames[0] ||
+      LOCAL_MODEL_NAME;
 
-    if (!hasRequestedModel) {
+    if (!selectedModelName) {
       throw new Error(
-        `Local model ${LOCAL_MODEL_NAME} is not ready yet. Wait for Ollama to finish pulling it, or run: ollama pull ${LOCAL_MODEL_NAME}`,
+        `No local Ollama model is ready yet. Wait for Ollama to finish pulling a model, or run: ollama pull ${LOCAL_MODEL_NAME}`,
       );
     }
   } catch (error) {
     if (error?.name === "AbortError") {
       throw new Error(
-        `Local model check timed out. Make sure Ollama is running and ${LOCAL_MODEL_NAME} is pulled.`,
+        `Local model check timed out. Make sure Ollama is running and one of the local models is pulled.`,
       );
     }
 
@@ -546,7 +549,7 @@ async function generateLocalReply({ state, userMessage }) {
       },
       signal: controller.signal,
       body: JSON.stringify({
-        model: LOCAL_MODEL_NAME,
+        model: selectedModelName,
         messages: buildLocalInputMessages(state, userMessage),
         stream: false,
         options: {
@@ -568,13 +571,13 @@ async function generateLocalReply({ state, userMessage }) {
 
     return {
       reply,
-      model: LOCAL_MODEL_NAME,
+      model: selectedModelName,
       reasoningEffort: "local",
       responseId: safeText(payload?.id),
     };
   } catch (error) {
     if (error?.name === "AbortError") {
-      throw new Error(`Local model timed out. Start Ollama and make sure ${LOCAL_MODEL_NAME} is available.`);
+      throw new Error(`Local model timed out. Start Ollama and make sure a local model is available.`);
     }
 
     throw new Error(

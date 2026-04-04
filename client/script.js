@@ -92,6 +92,10 @@ function getLocalDefaultApiBase() {
 }
 
 function getConfiguredApiBaseUrl() {
+  if (isLocalhostHost(window.location.hostname)) {
+    return getLocalDefaultApiBase();
+  }
+
   const stored = normalizeApiBaseUrl(window.localStorage.getItem(API_BASE_STORAGE_KEY));
   if (stored) {
     return stored;
@@ -132,6 +136,10 @@ function hasRemoteBackendConfigured() {
 }
 
 function getBackendHint() {
+  if (isLocalhostHost(window.location.hostname)) {
+    return "";
+  }
+
   return hasRemoteBackendConfigured() ? "" : "Set backend URL in Settings.";
 }
 

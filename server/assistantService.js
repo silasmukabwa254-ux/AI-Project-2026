@@ -9,12 +9,14 @@ const DEFAULT_MODEL = process.env.OPENAI_MODEL || "gpt-5.4";
 const DEFAULT_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT || "medium";
 const OPENAI_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 12000);
 const ASSISTANT_PROVIDER = safeText(process.env.ASSISTANT_PROVIDER).toLowerCase();
-const LOCAL_MODEL_NAME = safeText(process.env.LOCAL_MODEL_NAME) || "llama3.2:1b";
+const LOCAL_MODEL_NAME = safeText(process.env.LOCAL_MODEL_NAME) || "llama3.2:latest";
 const LOCAL_MODEL_URL = safeText(process.env.LOCAL_MODEL_URL) || "http://127.0.0.1:11434/api/chat";
 const LOCAL_MODEL_TAGS_URL = new URL("./tags", LOCAL_MODEL_URL).toString();
-const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS || 30000);
+const LOCAL_MODEL_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_TIMEOUT_MS || 60000);
 const LOCAL_MODEL_CHECK_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_CHECK_TIMEOUT_MS || 5000);
 const LOCAL_MODEL_PREFERENCES = [LOCAL_MODEL_NAME, "llama3.2:latest", "llama3.2:1b"].filter(Boolean);
+const WEB_LOOKUP_TIMEOUT_MS = Number(process.env.WEB_LOOKUP_TIMEOUT_MS || 8000);
+const WEB_LOOKUP_RESULT_LIMIT = Number(process.env.WEB_LOOKUP_RESULT_LIMIT || 3);
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -64,6 +66,21 @@ function readPromptFile(filePath, fallbackText) {
 
 function safeText(value) {
   return String(value ?? "").trim();
+}
+
+function decodeHtmlEntities(text) {
+  return safeText(text)
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&apos;", "'")
+    .replaceAll("&nbsp;", " ");
+}
+
+function cleanSnippet(text) {
+  return decodeHtmlEntities(safeText(text).replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
 function truncate(text, limit = 120) {
@@ -326,8 +343,231 @@ function buildTimelineLines(state, query) {
     .filter((line) => line !== "- History: ");
 }
 
-function buildContextBlock(state, userMessage) {
+function shouldUseWebLookup(query) {
+  const normalized = normalizeSearchText(query);
+  if (!normalized) {
+    return false;
+  }
+
+  if (
+    /^(hi|hello|hey|thanks|thank you|good morning|good afternoon|good evening|how are you|what can you do|who are you|what is your name)$/i.test(
+      normalized,
+    )
+  ) {
+    return false;
+  }
+
+  return /(\b(latest|current|recent|today|news|sports|score|scores|result|results|weather|price|prices|stock|stocks|election|update|event|events|this year|last year|year\b)\b|\b(19|20)\d{2}\b)/i.test(
+    normalized,
+  );
+}
+
+function buildWebSearchQuery(query, state) {
+  const text = safeText(query) || getLatestUserMessageText(state);
+  if (!text) {
+    return "";
+  }
+
+  if (/that year|that time|this year|last year|it there|there/i.test(text)) {
+    const summary = safeText(state?.conversations?.[0]?.summary);
+    if (summary) {
+      return `${text} ${summary}`.trim();
+    }
+  }
+
+  return text;
+}
+
+function resolveDuckDuckGoHref(href) {
+  const raw = safeText(href);
+  if (!raw) {
+    return "";
+  }
+
+  try {
+    const url = new URL(raw, "https://duckduckgo.com");
+    const redirected = url.searchParams.get("uddg");
+    if (redirected) {
+      return decodeURIComponent(redirected);
+    }
+
+    if (url.hostname === "duckduckgo.com" && url.pathname === "/l/") {
+      return decodeURIComponent(url.searchParams.get("uddg") || "");
+    }
+
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+function collectDuckDuckGoTopics(items, results, limit) {
+  if (!Array.isArray(items) || !Array.isArray(results)) {
+    return;
+  }
+
+  for (const item of items) {
+    if (results.length >= limit || !item || typeof item !== "object") {
+      continue;
+    }
+
+    if (safeText(item?.Text)) {
+      results.push({
+        title: safeText(item?.Text),
+        url: resolveDuckDuckGoHref(item?.FirstURL),
+        snippet: safeText(item?.Text),
+      });
+    }
+
+    if (Array.isArray(item?.Topics) && item.Topics.length) {
+      collectDuckDuckGoTopics(item.Topics, results, limit);
+    }
+  }
+}
+
+function parseDuckDuckGoHtmlResults(html, limit) {
+  const results = [];
+  const titlePattern = /<a[^>]*class="result__a"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+
+  while ((match = titlePattern.exec(html)) && results.length < limit) {
+    const href = resolveDuckDuckGoHref(match[1]);
+    const title = cleanSnippet(match[2]);
+    const slice = html.slice(match.index, Math.min(html.length, match.index + 2200));
+    const snippetMatch = slice.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/(?:a|div)>/i);
+    const snippet = cleanSnippet(snippetMatch?.[1]);
+
+    if (!title && !snippet) {
+      continue;
+    }
+
+    results.push({
+      title: title || snippet,
+      url: href,
+      snippet,
+    });
+  }
+
+  return results;
+}
+
+function formatWebContextLine(result) {
+  if (!result || typeof result !== "object") {
+    return "";
+  }
+
+  const title = cleanSnippet(result.title);
+  const snippet = cleanSnippet(result.snippet);
+  const source = cleanSnippet(result.url);
+
+  if (!title && !snippet) {
+    return "";
+  }
+
+  const parts = [];
+  if (title) {
+    parts.push(title);
+  }
+
+  if (snippet && snippet !== title) {
+    parts.push(snippet);
+  }
+
+  let line = parts.join(": ");
+  if (source) {
+    line = line ? `${line} (${source})` : source;
+  }
+
+  return line.trim();
+}
+
+async function fetchWebContext(state, userMessage) {
+  const query = buildWebSearchQuery(userMessage, state);
+  if (!shouldUseWebLookup(query)) {
+    return [];
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), WEB_LOOKUP_TIMEOUT_MS);
+
+  try {
+    const instantUrl = new URL("https://api.duckduckgo.com/");
+    instantUrl.searchParams.set("q", query);
+    instantUrl.searchParams.set("format", "json");
+    instantUrl.searchParams.set("no_html", "1");
+    instantUrl.searchParams.set("skip_disambig", "1");
+    instantUrl.searchParams.set("no_redirect", "1");
+
+    const results = [];
+    const instantResponse = await fetch(instantUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Elyra/1.0",
+      },
+      signal: controller.signal,
+    });
+
+    const instantPayload = await instantResponse.json().catch(() => null);
+    if (instantResponse.ok && instantPayload) {
+      const heading = cleanSnippet(instantPayload?.Heading);
+      const abstractText = cleanSnippet(instantPayload?.AbstractText);
+      const abstractUrl = resolveDuckDuckGoHref(instantPayload?.AbstractURL);
+
+      if (heading || abstractText) {
+        results.push({
+          title: heading || "Quick answer",
+          url: abstractUrl,
+          snippet: abstractText || heading,
+        });
+      }
+
+      collectDuckDuckGoTopics(Array.isArray(instantPayload?.RelatedTopics) ? instantPayload.RelatedTopics : [], results, WEB_LOOKUP_RESULT_LIMIT);
+    }
+
+    if (results.length < WEB_LOOKUP_RESULT_LIMIT) {
+      const htmlUrl = new URL("https://html.duckduckgo.com/html/");
+      htmlUrl.searchParams.set("q", query);
+
+      const htmlResponse = await fetch(htmlUrl, {
+        method: "GET",
+        headers: {
+          Accept: "text/html",
+          "User-Agent": "Elyra/1.0",
+        },
+        signal: controller.signal,
+      });
+
+      const html = await htmlResponse.text();
+      if (htmlResponse.ok && html) {
+        const htmlResults = parseDuckDuckGoHtmlResults(html, WEB_LOOKUP_RESULT_LIMIT);
+        for (const result of htmlResults) {
+          const key = `${safeText(result.title)}|${safeText(result.url)}|${safeText(result.snippet)}`;
+          const duplicate = results.some((entry) => `${safeText(entry.title)}|${safeText(entry.url)}|${safeText(entry.snippet)}` === key);
+          if (!duplicate) {
+            results.push(result);
+          }
+          if (results.length >= WEB_LOOKUP_RESULT_LIMIT) {
+            break;
+          }
+        }
+      }
+    }
+
+    return results
+      .slice(0, WEB_LOOKUP_RESULT_LIMIT)
+      .map(formatWebContextLine)
+      .filter(Boolean);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function buildContextBlock(state, userMessage, options = {}) {
   const query = safeText(userMessage) || getLatestUserMessageText(state);
+  const webLines = Array.isArray(options?.webLines) ? options.webLines : [];
   const sections = [
     "You are Elyra, a realistic personal AI assistant.",
     "Answer the user's latest request directly.",
@@ -365,7 +605,68 @@ function buildContextBlock(state, userMessage) {
     sections.push(`Relevant historical anchors:\n${timelineLines.join("\n")}`);
   }
 
+  if (webLines.length) {
+    sections.push(
+      [
+        "Relevant live web context:",
+        ...webLines.map((line) => `- ${line}`),
+        "Use this live context for current events, sports, news, and factual lookups. Prefer it over memory when they conflict.",
+      ].join("\n"),
+    );
+  }
+
   return sections.join("\n\n");
+}
+
+function buildLocalContextBlock(state, userMessage, webLines = []) {
+  const query = safeText(userMessage) || getLatestUserMessageText(state);
+  const sections = [
+    "You are Elyra, a realistic personal AI assistant.",
+    "Answer the user's latest request directly.",
+    "Stay calm, natural, and useful.",
+    "Keep replies concise unless the user asks for detail.",
+    "Use live web context when present for current or factual questions.",
+  ];
+
+  if (query) {
+    sections.push(`Latest user request:\n- ${truncate(query, 180)}`);
+  }
+
+  const conversationSummary = safeText(state?.conversations?.[0]?.summary);
+  if (conversationSummary) {
+    sections.push(`Conversation summary:\n- ${truncate(conversationSummary, 140)}`);
+  }
+
+  const memoryLines = buildMemoryLines(state, query).slice(0, 2);
+  if (memoryLines.length) {
+    sections.push(`Relevant memory:\n${memoryLines.join("\n")}`);
+  }
+
+  if (webLines.length) {
+    sections.push(
+      [
+        "Relevant live web context:",
+        ...webLines.map((line) => `- ${line}`),
+        "Use this live context for current events, sports, news, and factual lookups. Prefer it over memory when they conflict.",
+      ].join("\n"),
+    );
+  }
+
+  return sections.join("\n\n");
+}
+
+function buildWebFallbackReply(userMessage, webLines) {
+  const lines = Array.isArray(webLines)
+    ? webLines.map((line) => safeText(line)).filter(Boolean).slice(0, WEB_LOOKUP_RESULT_LIMIT)
+    : [];
+
+  if (!lines.length) {
+    return "";
+  }
+
+  const topic = safeText(userMessage);
+  const intro = topic ? `I found some live context for "${truncate(topic, 80)}":` : "I found some live context:";
+  return [intro, ...lines.map((line) => `- ${line}`), "If you want, I can narrow this down or turn it into a cleaner summary."].join("\n");
 }
 
 function buildInputMessages(state, userMessage, usePreviousResponse) {
@@ -394,13 +695,13 @@ function buildInputMessages(state, userMessage, usePreviousResponse) {
   ];
 }
 
-function buildLocalInputMessages(state, userMessage) {
+function buildLocalInputMessages(state, userMessage, webLines = []) {
   const systemMessage = {
     role: "system",
-    content: buildContextBlock(state, userMessage),
+    content: buildLocalContextBlock(state, userMessage, webLines),
   };
 
-  const recentMessages = normalizeMessages(Array.isArray(state?.messages) ? state.messages.slice(-6) : []);
+  const recentMessages = normalizeMessages(Array.isArray(state?.messages) ? state.messages.slice(-4) : []);
   return [systemMessage, ...recentMessages];
 }
 
@@ -537,6 +838,29 @@ async function generateLocalReply({ state, userMessage }) {
     clearTimeout(preflightTimeoutId);
   }
 
+  const webLines = await fetchWebContext(state, userMessage);
+  if (shouldUseWebLookup(userMessage) && !webLines.length) {
+    return {
+      reply:
+        "I can't reach live web results right now, so I don't want to guess on that one. Ask me again later, or narrow it to a general question I can answer from memory.",
+      model: selectedModelName,
+      reasoningEffort: "local-web",
+      responseId: "",
+    };
+  }
+
+  if (webLines.length && shouldUseWebLookup(userMessage)) {
+    const fallbackReply = buildWebFallbackReply(userMessage, webLines);
+    if (fallbackReply) {
+      return {
+        reply: fallbackReply,
+        model: selectedModelName,
+        reasoningEffort: "local-web",
+        responseId: "",
+      };
+    }
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), LOCAL_MODEL_TIMEOUT_MS);
 
@@ -550,10 +874,11 @@ async function generateLocalReply({ state, userMessage }) {
       signal: controller.signal,
       body: JSON.stringify({
         model: selectedModelName,
-        messages: buildLocalInputMessages(state, userMessage),
+        messages: buildLocalInputMessages(state, userMessage, webLines),
         stream: false,
         options: {
-          temperature: 0.7,
+          temperature: 0.5,
+          num_predict: 180,
         },
       }),
     });
@@ -576,8 +901,29 @@ async function generateLocalReply({ state, userMessage }) {
       responseId: safeText(payload?.id),
     };
   } catch (error) {
+    if (error?.name === "AbortError" && webLines.length) {
+      return {
+        reply: buildWebFallbackReply(userMessage, webLines),
+        model: selectedModelName,
+        reasoningEffort: "local-web",
+        responseId: "",
+      };
+    }
+
     if (error?.name === "AbortError") {
       throw new Error(`Local model timed out. Start Ollama and make sure a local model is available.`);
+    }
+
+    if (webLines.length) {
+      const fallbackReply = buildWebFallbackReply(userMessage, webLines);
+      if (fallbackReply) {
+        return {
+          reply: fallbackReply,
+          model: selectedModelName,
+          reasoningEffort: "local-web",
+          responseId: "",
+        };
+      }
     }
 
     throw new Error(

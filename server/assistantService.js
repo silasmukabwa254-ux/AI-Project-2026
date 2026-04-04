@@ -83,6 +83,18 @@ function cleanSnippet(text) {
   return decodeHtmlEntities(safeText(text).replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
+function formatRuntimeTime() {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: process.env.TZ || "Africa/Nairobi",
+      dateStyle: "full",
+      timeStyle: "short",
+    }).format(new Date());
+  } catch {
+    return nowIso();
+  }
+}
+
 function truncate(text, limit = 120) {
   const value = safeText(text);
   if (value.length <= limit) {
@@ -362,6 +374,72 @@ function shouldUseWebLookup(query) {
   );
 }
 
+function shouldPreferWebSummary(query) {
+  const normalized = normalizeSearchText(query);
+  if (!normalized) {
+    return false;
+  }
+
+  return /(\bbrief about\b|\bgive me a brief\b|\btell me about\b|\bwhat happened\b|\bwhat occurred\b|\bwhat took place\b|\bwhat went on\b|\bwhat is\b|\bwho is\b|\bexplain\b|\bwhy is\b|\bwhy are\b|\bhow does\b|\bhow did\b|\bwhen did\b|\bwhat was\b|\bsummary of\b|\btravel\b|\btourism\b|\bvisit\b|\bcountry\b|\bcity\b|\bcapital\b|\bhistory of\b|\bhistorical\b|\bbible\b|\bjesus\b|\bnews about\b|\blatest on\b|\bwhat's happening\b|\bwhat is happening\b)/i.test(
+    normalized,
+  );
+}
+
+function isRuntimeTimeQuestion(query) {
+  const normalized = normalizeSearchText(query);
+  if (!normalized) {
+    return false;
+  }
+
+  return /(\b(current time|current date|what time is it|what day is it|what date is it|today's date|todays date|right now|now in|time in|date in|day of week|what year is it)\b|\b(now|today|tonight|this morning|this afternoon|this evening)\b)/i.test(
+    normalized,
+  );
+}
+
+function buildRuntimeTimeReply(query) {
+  const normalized = normalizeSearchText(query);
+  const timeZone = /nairobi|kenya/.test(normalized) ? "Africa/Nairobi" : "UTC";
+
+  try {
+    const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      dateStyle: "full",
+    });
+    const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      timeStyle: "short",
+    });
+
+    const now = new Date();
+    const dateText = dateFormatter.format(now);
+    const timeText = timeFormatter.format(now);
+    const dayText = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      weekday: "long",
+    }).format(now);
+
+    if (/what year is it/.test(normalized)) {
+      return `It is ${now.getUTCFullYear()} right now.`;
+    }
+
+    if (/what day is it|day of week/.test(normalized)) {
+      return `It is ${dayText} today.`;
+    }
+
+    if (/current date|what date is it|today's date|todays date/.test(normalized)) {
+      return `Today's date is ${dateText}.`;
+    }
+
+    if (/time in|current time|what time is it|right now|now in/.test(normalized)) {
+      return `The current time in ${timeZone === "Africa/Nairobi" ? "Nairobi" : "UTC"} is ${timeText}.`;
+    }
+
+    return `Right now it is ${dateText}.`;
+  } catch {
+    return `Right now it is ${nowIso()}.`;
+  }
+}
+
 function buildWebSearchQuery(query, state) {
   const text = safeText(query) || getLatestUserMessageText(state);
   if (!text) {
@@ -483,7 +561,7 @@ function formatWebContextLine(result) {
 
 async function fetchWebContext(state, userMessage) {
   const query = buildWebSearchQuery(userMessage, state);
-  if (!shouldUseWebLookup(query)) {
+  if (!shouldUseWebLookup(query) && !shouldPreferWebSummary(query)) {
     return [];
   }
 
@@ -574,6 +652,7 @@ function buildContextBlock(state, userMessage, options = {}) {
     "Stay calm, natural, and useful.",
     "Keep replies concise unless the user asks for detail.",
     "If something is missing, ask one focused question instead of guessing.",
+    `Current runtime date and time: ${formatRuntimeTime()}.`,
   ];
 
   if (query) {
@@ -626,6 +705,7 @@ function buildLocalContextBlock(state, userMessage, webLines = []) {
     "Stay calm, natural, and useful.",
     "Keep replies concise unless the user asks for detail.",
     "Use live web context when present for current or factual questions.",
+    `Current runtime date and time: ${formatRuntimeTime()}.`,
   ];
 
   if (query) {
@@ -795,6 +875,15 @@ async function generateOpenAIReply({ state, userMessage }) {
 }
 
 async function generateLocalReply({ state, userMessage }) {
+  if (isRuntimeTimeQuestion(userMessage)) {
+    return {
+      reply: buildRuntimeTimeReply(userMessage),
+      model: "runtime",
+      reasoningEffort: "time",
+      responseId: "",
+    };
+  }
+
   const preflightController = new AbortController();
   const preflightTimeoutId = setTimeout(() => preflightController.abort(), LOCAL_MODEL_CHECK_TIMEOUT_MS);
   let selectedModelName = LOCAL_MODEL_NAME;
@@ -849,7 +938,7 @@ async function generateLocalReply({ state, userMessage }) {
     };
   }
 
-  if (webLines.length && shouldUseWebLookup(userMessage)) {
+  if (webLines.length && (shouldUseWebLookup(userMessage) || shouldPreferWebSummary(userMessage))) {
     const fallbackReply = buildWebFallbackReply(userMessage, webLines);
     if (fallbackReply) {
       return {

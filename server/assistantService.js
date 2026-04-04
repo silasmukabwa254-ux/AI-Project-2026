@@ -374,6 +374,17 @@ function shouldUseWebLookup(query) {
   );
 }
 
+function shouldForceFreshWebLookup(query) {
+  const normalized = normalizeSearchText(query);
+  if (!normalized) {
+    return false;
+  }
+
+  return /(\bnews update\b|\bnews today\b|\btoday's news\b|\bnews for today\b|\bworld news\b|\bworld update\b|\bworld updates\b|\bcurrent events\b|\blatest news\b|\blatest update\b|\bwhat's new\b|\bwhat is new\b|\bthis week\b|\bthis month\b|\bthis year\b|\bcurrent sports\b|\bsports update\b|\bplayer stats\b|\bgoal tally\b|\bgoal count\b|\bscore update\b|\bmatch update\b)/i.test(
+    normalized,
+  );
+}
+
 function shouldPreferWebSummary(query) {
   const normalized = normalizeSearchText(query);
   if (!normalized) {
@@ -561,7 +572,7 @@ function formatWebContextLine(result) {
 
 async function fetchWebContext(state, userMessage) {
   const query = buildWebSearchQuery(userMessage, state);
-  if (!shouldUseWebLookup(query) && !shouldPreferWebSummary(query)) {
+  if (!shouldUseWebLookup(query) && !shouldPreferWebSummary(query) && !shouldForceFreshWebLookup(query)) {
     return [];
   }
 
@@ -928,7 +939,7 @@ async function generateLocalReply({ state, userMessage }) {
   }
 
   const webLines = await fetchWebContext(state, userMessage);
-  if (shouldUseWebLookup(userMessage) && !webLines.length) {
+  if ((shouldUseWebLookup(userMessage) || shouldForceFreshWebLookup(userMessage)) && !webLines.length) {
     return {
       reply:
         "I can't reach live web results right now, so I don't want to guess on that one. Ask me again later, or narrow it to a general question I can answer from memory.",
@@ -938,7 +949,10 @@ async function generateLocalReply({ state, userMessage }) {
     };
   }
 
-  if (webLines.length && (shouldUseWebLookup(userMessage) || shouldPreferWebSummary(userMessage))) {
+  if (
+    webLines.length &&
+    (shouldUseWebLookup(userMessage) || shouldPreferWebSummary(userMessage) || shouldForceFreshWebLookup(userMessage))
+  ) {
     const fallbackReply = buildWebFallbackReply(userMessage, webLines);
     if (fallbackReply) {
       return {

@@ -570,6 +570,68 @@ function formatWebContextLine(result) {
   return line.trim();
 }
 
+function extractWebBriefingTopic(line) {
+  const text = safeText(line);
+  if (!text) {
+    return "";
+  }
+
+  const withoutUrl = text.replace(/\s*\((https?:\/\/[^)]+)\)\s*$/, "");
+  const title = withoutUrl.split(":")[0];
+  const baseTitle = title.split("|")[0].split(" - ")[0];
+
+  return baseTitle
+    .replace(/^[-•]\s*/, "")
+    .replace(/\b(news|latest|updates?|today|headlines?|report|reports)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractWebSourceLabel(line) {
+  const text = safeText(line);
+  if (!text) {
+    return "";
+  }
+
+  const withoutUrl = text.replace(/\s*\((https?:\/\/[^)]+)\)\s*$/, "");
+  const title = withoutUrl.split(":")[0];
+  const pipeParts = title.split("|").map((part) => safeText(part)).filter(Boolean);
+  const dashParts = title.split(" - ").map((part) => safeText(part)).filter(Boolean);
+  const candidate = pipeParts.length > 1 ? pipeParts[pipeParts.length - 1] : dashParts.length > 1 ? dashParts[dashParts.length - 1] : "";
+
+  return candidate.replace(/^[-•]\s*/, "").replace(/\s+/g, " ").trim();
+}
+
+function extractWebBriefingThemes(lines) {
+  const text = safeText(Array.isArray(lines) ? lines.join(" ") : "").toLowerCase();
+  const themes = [];
+
+  const themeChecks = [
+    [/rumors?/, "rumors"],
+    [/analysis/, "analysis"],
+    [/updates?/, "updates"],
+    [/headlines?/, "headlines"],
+    [/goals?/, "goals"],
+    [/scores?|scorelines?/, "scores"],
+    [/transfers?/, "transfers"],
+    [/injur(?:y|ies)/, "injuries"],
+    [/form/, "form"],
+    [/stats?/, "stats"],
+    [/standings?/, "standings"],
+    [/fixtures?/, "fixtures"],
+    [/matches?/, "matches"],
+    [/player news/, "player news"],
+  ];
+
+  for (const [pattern, label] of themeChecks) {
+    if (pattern.test(text) && !themes.includes(label)) {
+      themes.push(label);
+    }
+  }
+
+  return themes.slice(0, 3);
+}
+
 async function fetchWebContext(state, userMessage) {
   const query = buildWebSearchQuery(userMessage, state);
   if (!shouldUseWebLookup(query) && !shouldPreferWebSummary(query) && !shouldForceFreshWebLookup(query)) {
@@ -758,17 +820,20 @@ function buildWebFallbackReply(userMessage, webLines) {
   }
 
   const topic = safeText(userMessage);
-  const intro = topic ? `Here’s the latest on ${truncate(topic, 80)}.` : "Here’s the latest update.";
-  const body = lines
-    .map((line) => line.replace(/\s*\((https?:\/\/[^)]+)\)\s*$/, "").replace(/^[-•]\s*/, "").trim())
+  const briefingTopic = extractWebBriefingTopic(lines[0]) || (topic ? truncate(topic, 80) : "that topic");
+  const sources = lines
+    .map(extractWebSourceLabel)
     .filter(Boolean)
-    .map((line, index) => {
-      const clean = line.replace(/\s+/g, " ").trim();
-      return index === 0 ? clean : clean.replace(/^./, (character) => character.toLowerCase());
-    })
-    .join(" ");
+    .slice(0, 3);
+  const themes = extractWebBriefingThemes(lines);
 
-  return `${intro} ${body}${body.endsWith(".") ? "" : "."} If you want, I can narrow it to a shorter briefing or focus on one angle.`;
+  const lead = `Here’s the latest on ${briefingTopic}.`;
+  const sourceSentence = sources.length ? `Recent coverage includes ${sources.join(", ")}.` : "";
+  const themeSentence = themes.length ? `The coverage focuses on ${themes.join(", ")}.` : "";
+
+  return [lead, sourceSentence, themeSentence, "If you want, I can narrow it to one angle or give you a shorter version."]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function buildInputMessages(state, userMessage, usePreviousResponse) {

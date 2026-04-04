@@ -581,8 +581,19 @@ function extractWebBriefingTopic(line) {
   const baseTitle = title.split("|")[0].split(" - ")[0];
 
   return baseTitle
-    .replace(/^[-•]\s*/, "")
+    .replace(/^[-*]\s*/, "")
     .replace(/\b(news|latest|updates?|today|headlines?|report|reports)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cleanBriefingTopic(text) {
+  return safeText(text)
+    .replace(
+      /^(what is the current update on|what is the current update in|what is the latest update on|what is the latest update in|what's the current update on|what's the current update in|what's the latest update on|what's the latest update in|what is the news update for|what's the news update for|current update on|current update in|latest update on|latest update in|news update on|news update in|update on|update in|tell me about|give me a brief about|give me a brief on|brief about|what is|what's|who is|who was|explain)\s+/i,
+      "",
+    )
+    .replace(/\s*\?+\s*$/, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -593,13 +604,30 @@ function extractWebSourceLabel(line) {
     return "";
   }
 
+  const urlMatch = text.match(/\((https?:\/\/[^)]+)\)\s*$/);
+  if (urlMatch) {
+    try {
+      const hostname = new URL(urlMatch[1]).hostname.replace(/^www\./i, "").replace(/^m\./i, "");
+      if (hostname) {
+        return hostname;
+      }
+    } catch {
+      // Fall through to title-based cleanup.
+    }
+  }
+
   const withoutUrl = text.replace(/\s*\((https?:\/\/[^)]+)\)\s*$/, "");
   const title = withoutUrl.split(":")[0];
   const pipeParts = title.split("|").map((part) => safeText(part)).filter(Boolean);
   const dashParts = title.split(" - ").map((part) => safeText(part)).filter(Boolean);
-  const candidate = pipeParts.length > 1 ? pipeParts[pipeParts.length - 1] : dashParts.length > 1 ? dashParts[dashParts.length - 1] : "";
+  const candidate =
+    pipeParts.length > 1 ? pipeParts[pipeParts.length - 1] : dashParts.length > 1 ? dashParts[dashParts.length - 1] : "";
 
-  return candidate.replace(/^[-•]\s*/, "").replace(/\s+/g, " ").trim();
+  return candidate
+    .replace(/^[-*]\s*/, "")
+    .replace(/\b(latest|breaking|news|updates?|today|headlines?|report|reports|analysis|coverage)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function extractWebBriefingThemes(lines) {
@@ -607,20 +635,15 @@ function extractWebBriefingThemes(lines) {
   const themes = [];
 
   const themeChecks = [
-    [/rumors?/, "rumors"],
-    [/analysis/, "analysis"],
-    [/updates?/, "updates"],
-    [/headlines?/, "headlines"],
-    [/goals?/, "goals"],
-    [/scores?|scorelines?/, "scores"],
-    [/transfers?/, "transfers"],
-    [/injur(?:y|ies)/, "injuries"],
-    [/form/, "form"],
-    [/stats?/, "stats"],
-    [/standings?/, "standings"],
-    [/fixtures?/, "fixtures"],
-    [/matches?/, "matches"],
-    [/player news/, "player news"],
+    [/\bpolitics?\b|\belection(s)?\b|\bgov(ernment)?\b|\bparliament\b/, "politics"],
+    [/\bbusiness\b|\beconom(y|ic)\b|\bmarket(s)?\b|\bstocks?\b/, "business"],
+    [/\bsports?\b|\bfootball\b|\bgoal(s)?\b|\bscore(s)?\b|\bmatch(es)?\b|\bfixture(s)?\b|\bleague\b/, "sports"],
+    [/\btechnology\b|\btech\b|\bai\b|\bgadget(s)?\b/, "technology"],
+    [/\bhealth\b|\bmedical\b|\bmedicine\b|\bhospital(s)?\b/, "health"],
+    [/\bworld\b|\binternational\b|\bglobal\b/, "world news"],
+    [/\bhistory\b|\bhistorical\b|\bheritage\b/, "history"],
+    [/\bculture\b|\bentertainment\b|\bfilm\b|\bmusic\b/, "culture"],
+    [/\btravel\b|\btourism\b|\bvisit\b|\bcountry\b|\bcity\b/, "travel"],
   ];
 
   for (const [pattern, label] of themeChecks) {
@@ -820,18 +843,13 @@ function buildWebFallbackReply(userMessage, webLines) {
   }
 
   const topic = safeText(userMessage);
-  const briefingTopic = extractWebBriefingTopic(lines[0]) || (topic ? truncate(topic, 80) : "that topic");
-  const sources = lines
-    .map(extractWebSourceLabel)
-    .filter(Boolean)
-    .slice(0, 3);
+  const briefingTopic = cleanBriefingTopic(topic) || extractWebBriefingTopic(lines[0]) || "that topic";
   const themes = extractWebBriefingThemes(lines);
 
-  const lead = `Here’s the latest on ${briefingTopic}.`;
-  const sourceSentence = sources.length ? `Recent coverage includes ${sources.join(", ")}.` : "";
-  const themeSentence = themes.length ? `The coverage focuses on ${themes.join(", ")}.` : "";
+  const lead = `Here's the latest on ${briefingTopic}.`;
+  const themeSentence = themes.length ? `The main angles are ${themes.join(", ")}.` : "The current picture is still developing.";
 
-  return [lead, sourceSentence, themeSentence, "If you want, I can narrow it to one angle or give you a shorter version."]
+  return [lead, "I checked recent live coverage.", themeSentence, "If you want, I can narrow it to one angle or give you a shorter version."]
     .filter(Boolean)
     .join(" ");
 }

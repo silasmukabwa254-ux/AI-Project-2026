@@ -18,22 +18,88 @@
         </div>
       </div>
 
+      <div class="header-center" aria-label="Assistant metrics">
+        <div class="header-metrics">
+          <div class="metric-tile">
+            <span>Chats</span>
+            <strong id="metric-conversations">0</strong>
+            <small>Active</small>
+          </div>
+          <div class="metric-tile">
+            <span>Memory</span>
+            <strong id="metric-memories">0</strong>
+            <small>Saved</small>
+          </div>
+          <div class="metric-tile">
+            <span>World</span>
+            <strong id="metric-world">0</strong>
+            <small>Live</small>
+          </div>
+        </div>
+      </div>
+
       <div class="header-actions">
         <button class="ghost-button" id="settings-button" type="button">Settings</button>
       </div>
     </header>
 
     <div class="workspace workspace--assistant">
+      <aside class="rail rail--left" aria-label="Workspace library">
+        <details class="panel panel--compact" open>
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Conversations</p>
+              <h2>Recent</h2>
+            </div>
+            <span class="panel-chip">Live</span>
+          </summary>
+          <div class="panel-content">
+            <div class="list" id="conversation-list"></div>
+          </div>
+        </details>
+
+        <details class="panel panel--compact" open>
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Memory</p>
+              <h2>Saved</h2>
+            </div>
+            <span class="panel-chip">Keep</span>
+          </summary>
+          <div class="panel-content">
+            <div class="list" id="memory-preview"></div>
+          </div>
+        </details>
+
+        <details class="panel panel--compact">
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Notes</p>
+              <h2>Quick capture</h2>
+            </div>
+            <span class="panel-chip">Save</span>
+          </summary>
+          <div class="panel-content">
+            <p class="panel-note">Save a thought, project step, or reminder.</p>
+            <form class="mini-form" id="history-form">
+              <textarea id="history-input" name="history-input" rows="4" placeholder="Example: Layout done."></textarea>
+              <button class="primary-button" type="submit">Save note</button>
+            </form>
+            <div class="list" id="history-preview"></div>
+          </div>
+        </details>
+      </aside>
+
       <main class="stage stage--assistant">
         <section class="conversation-surface">
           <header class="conversation-head">
             <div>
-              <p class="panel-kicker">Chat</p>
-              <h2>Chat</h2>
+              <p class="panel-kicker">Conversation</p>
+              <h2>Ask anything</h2>
             </div>
             <div class="conversation-badges">
-              <span class="status-chip">Live</span>
-              <span class="status-chip">Private</span>
+              <span class="status-chip">Chat first</span>
+              <span class="status-chip">Voice ready</span>
             </div>
           </header>
 
@@ -55,14 +121,14 @@
         </section>
       </main>
 
-      <aside class="context-rail" aria-label="Secondary context">
-        <details class="panel panel--compact">
+      <aside class="rail rail--right" aria-label="Live context">
+        <details class="panel panel--compact" open>
           <summary class="panel-summary">
             <div class="panel-summary-copy">
               <p class="panel-kicker">State</p>
-              <h2>Active</h2>
+              <h2>Live</h2>
             </div>
-            <span class="panel-chip">Live</span>
+            <span class="panel-chip">Now</span>
           </summary>
           <div class="panel-content">
             <p id="personality-note">Chat | Memory</p>
@@ -72,30 +138,56 @@
         <details class="panel panel--compact">
           <summary class="panel-summary">
             <div class="panel-summary-copy">
-              <p class="panel-kicker">Memory</p>
-              <h2>Recent</h2>
+              <p class="panel-kicker">World</p>
+              <h2>Capture</h2>
             </div>
-            <span class="panel-chip">Saved</span>
+            <span class="panel-chip">Store</span>
           </summary>
           <div class="panel-content">
-            <div class="list" id="memory-preview"></div>
+            <p class="panel-note">Add a live event or update you want Elyra to remember.</p>
+            <form class="mini-form" id="world-form">
+              <textarea id="world-input" name="world-input" rows="4" placeholder="Example: Kenya election coverage changed today."></textarea>
+              <button class="primary-button" type="submit">Save update</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="panel panel--compact" open>
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">World</p>
+              <h2>Updates</h2>
+            </div>
+            <span class="panel-chip">Live</span>
+          </summary>
+          <div class="panel-content">
+            <div class="list" id="world-updates-preview"></div>
           </div>
         </details>
 
         <details class="panel panel--compact">
           <summary class="panel-summary">
             <div class="panel-summary-copy">
-              <p class="panel-kicker">Notes</p>
-              <h2>Quick</h2>
+              <p class="panel-kicker">Timeline</p>
+              <h2>History</h2>
             </div>
-            <span class="panel-chip">Store</span>
+            <span class="panel-chip">Past</span>
           </summary>
           <div class="panel-content">
-            <p class="panel-note">Save a thought or update.</p>
-            <form class="mini-form" id="history-form">
-              <textarea id="history-input" name="history-input" rows="4" placeholder="Example: Layout done."></textarea>
-              <button class="primary-button" type="submit">Save</button>
-            </form>
+            <div class="list" id="world-timeline-preview"></div>
+          </div>
+        </details>
+
+        <details class="panel panel--compact">
+          <summary class="panel-summary">
+            <div class="panel-summary-copy">
+              <p class="panel-kicker">Activity</p>
+              <h2>Recent</h2>
+            </div>
+            <span class="panel-chip">Log</span>
+          </summary>
+          <div class="panel-content">
+            <div class="list" id="activity-preview"></div>
           </div>
         </details>
       </aside>

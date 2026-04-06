@@ -1,5 +1,7 @@
 const { readFileSync } = require("node:fs");
 const path = require("node:path");
+const { safeText } = require("../shared/utils");
+const { SimpleCache } = require("./middleware");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const PROFILE_PATH = path.join(ROOT_DIR, "shared", "prompts", "profile.md");
@@ -17,6 +19,7 @@ const LOCAL_MODEL_CHECK_TIMEOUT_MS = Number(process.env.LOCAL_MODEL_CHECK_TIMEOU
 const LOCAL_MODEL_PREFERENCES = [LOCAL_MODEL_NAME, "llama3.2:latest", "llama3.2:1b"].filter(Boolean);
 const WEB_LOOKUP_TIMEOUT_MS = Number(process.env.WEB_LOOKUP_TIMEOUT_MS || 8000);
 const WEB_LOOKUP_RESULT_LIMIT = Number(process.env.WEB_LOOKUP_RESULT_LIMIT || 3);
+const webCache = new SimpleCache(900000);
 const STOP_WORDS = new Set([
   "a",
   "an",
@@ -64,9 +67,6 @@ function readPromptFile(filePath, fallbackText) {
   }
 }
 
-function safeText(value) {
-  return String(value ?? "").trim();
-}
 
 function decodeHtmlEntities(text) {
   return safeText(text)
@@ -661,6 +661,14 @@ async function fetchWebContext(state, userMessage) {
     return [];
   }
 
+  const cacheKey = `web:${query}`;
+  if (!shouldForceFreshWebLookup(query)) {
+    const cached = webCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), WEB_LOOKUP_TIMEOUT_MS);
 
@@ -728,10 +736,12 @@ async function fetchWebContext(state, userMessage) {
       }
     }
 
-    return results
+    const formatted = results
       .slice(0, WEB_LOOKUP_RESULT_LIMIT)
       .map(formatWebContextLine)
       .filter(Boolean);
+    webCache.set(cacheKey, formatted);
+    return formatted;
   } catch {
     return [];
   } finally {

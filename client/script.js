@@ -1,5 +1,7 @@
 const STORAGE_KEY = "ai-project-2026-state";
 const API_BASE_STORAGE_KEY = "ai-project-2026-api-base";
+const SYNC_DEBOUNCE_MS = 2000;
+const RENDER_DEBOUNCE_MS = 500;
 
 const elements = {
   composer: document.getElementById("composer"),
@@ -29,6 +31,8 @@ let state = loadState();
 let syncStatus = "checking";
 let syncInFlight = false;
 let syncQueued = false;
+let syncTimeoutId = null;
+let renderTimeoutId = null;
 
 function nowIso() {
   return new Date().toISOString();
@@ -759,10 +763,30 @@ function renderAll() {
   renderInspectorNote();
 }
 
+function debouncedRender() {
+  if (renderTimeoutId) {
+    clearTimeout(renderTimeoutId);
+  }
+  renderTimeoutId = window.setTimeout(() => {
+    renderAll();
+    renderTimeoutId = null;
+  }, RENDER_DEBOUNCE_MS);
+}
+
+function debouncedSync() {
+  if (syncTimeoutId) {
+    clearTimeout(syncTimeoutId);
+  }
+  syncTimeoutId = window.setTimeout(() => {
+    void syncStateToServer();
+    syncTimeoutId = null;
+  }, SYNC_DEBOUNCE_MS);
+}
+
 function persistAndRender() {
   saveState();
-  renderAll();
-  void syncStateToServer();
+  debouncedRender();
+  debouncedSync();
 }
 
 async function syncStateToServer() {

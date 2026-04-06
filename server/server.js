@@ -1,13 +1,14 @@
 const { createServer } = require("node:http");
-const { randomUUID } = require("node:crypto");
 const { mkdirSync, existsSync, readFileSync } = require("node:fs");
 const path = require("node:path");
 const { DatabaseSync } = require("node:sqlite");
-const { generateAssistantReply } = require("./assistantService");
+const { RateLimiter, SimpleCache, ErrorLogger } = require("./middleware");
+const { safeText, nowIso, createId } = require("../shared/utils");
+const { createHandlers } = require("./handlers");
 
 const APP_NAME = process.env.APP_NAME || "Elyra";
 const PORT = Number(process.env.PORT || 3001);
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "localhost:3000";
 const ROOT_DIR = path.resolve(__dirname, "..");
 const CLIENT_DIR = path.join(ROOT_DIR, "client");
 const DATA_DIR = path.join(__dirname, "data");
@@ -17,6 +18,9 @@ const DATABASE_PATH = resolveDatabasePath(process.env.DATABASE_PATH || DEFAULT_D
 mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new DatabaseSync(DATABASE_PATH);
+const rateLimiter = new RateLimiter(30, 60000);
+const webCache = new SimpleCache(900000);
+const errorLogger = new ErrorLogger();
 
 db.exec(`
   PRAGMA journal_mode = WAL;
@@ -40,24 +44,7 @@ function resolveDatabasePath(value) {
   return path.isAbsolute(value) ? value : path.resolve(__dirname, value);
 }
 
-function nowIso() {
-  return new Date().toISOString();
-}
 
-function createId(prefix) {
-  return `${prefix}-${randomUUID()}`;
-}
-
-function safeText(value) {
-  return String(value ?? "").trim();
-}
-
-function rewriteBrandingText(value) {
-  return safeText(value)
-    .replaceAll("AI Project 2026", "Elyra")
-    .replaceAll("AI Assistant 2026", "Elyra")
-    .replaceAll("Assistant 2026", "Elyra");
-}
 
 function getCorsHeaders() {
   return {
@@ -194,6 +181,8 @@ function normalizeConversation(item) {
 }
 
 function migrateBranding(state) {
+  const { rewriteBrandingText } = require("../shared/utils");
+
   const rewriteEntries = (entries, fields) =>
     entries.map((entry) => {
       if (!entry || typeof entry !== "object") {
@@ -375,158 +364,57 @@ function serveStaticFile(res, filePath) {
   return true;
 }
 
-function handleStateGet(res) {
-  const latest = readLatestSnapshot();
-  sendJson(res, 200, {
-    ok: true,
-    state: latest.state,
-    meta: {
-      snapshotId: latest.id,
-      reason: latest.reason,
-      createdAt: latest.createdAt,
-      snapshotCount: readSnapshotCount(),
-      databasePath: DATABASE_PATH,
-    },
-  });
-}
+const handlers = createHandlers(
+  db,
+  rateLimiter,
+  errorLogger,
+  getCorsHeaders,
+  normalizeState,
+  readLatestSnapshot,
+  readSnapshotCount,
+  writeSnapshot,
+);
 
-async function handleStatePost(req, res) {
-  try {
-    const body = await readRequestBody(req);
-    const nextState = normalizeState(body.state || body);
-    const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim() : "client-sync";
-    const snapshot = writeSnapshot(nextState, reason);
-
-    sendJson(res, 200, {
-      ok: true,
-      state: snapshot.state,
-      meta: {
-        snapshotId: snapshot.id,
-        reason: snapshot.reason,
-        snapshotCount: readSnapshotCount(),
-      },
-    });
-  } catch (error) {
-    sendJson(res, 400, {
-      ok: false,
-      error: error.message || "Unable to save state",
-    });
-  }
-}
-
-function handleHealth(res) {
-  const latest = readLatestSnapshot();
-  sendJson(res, 200, {
-    ok: true,
-    appName: APP_NAME,
-    status: "sqlite-backed",
-    snapshotCount: readSnapshotCount(),
-    latestSnapshotAt: latest.createdAt,
-  });
-}
-
-function handleOptions(res) {
-  res.writeHead(204, {
-    ...getCorsHeaders(),
-    "Cache-Control": "no-store",
-  });
-  res.end();
-}
-
-async function handleChat(req, res) {
-  try {
-    const body = await readRequestBody(req);
-    const message = safeText(body.message);
-
-    if (!message) {
-      sendJson(res, 400, {
-        ok: false,
-        error: "Message is required",
-      });
-      return;
-    }
-
-    const sourceState = body.state && typeof body.state === "object" ? body.state : readLatestSnapshot().state;
-    const nextState = normalizeState(sourceState);
-    const lastMessage = nextState.messages[nextState.messages.length - 1];
-
-    if (!lastMessage || lastMessage.role !== "user" || safeText(lastMessage.text) !== message) {
-      nextState.messages.push({
-        id: createId("msg"),
-        role: "user",
-        text: message,
-        createdAt: nowIso(),
-      });
-    }
-
-    const reply = await generateAssistantReply({ state: nextState, userMessage: message });
-
-    sendJson(res, 200, {
-      ok: true,
-      reply: reply.reply,
-      meta: {
-        model: reply.model,
-        reasoningEffort: reply.reasoningEffort,
-        responseId: reply.responseId,
-      },
-    });
-  } catch (error) {
-    sendJson(res, 503, {
-      ok: false,
-      error: error.message || "Assistant unavailable",
-    });
-  }
-}
+const staticFiles = {
+  "/": "index.html",
+  "/index.html": "index.html",
+  "/style.css": "style.css",
+  "/script.js": "script.js",
+  "/config.js": "config.js",
+};
 
 const server = createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
   const pathname = decodeURIComponent(url.pathname);
 
   if (req.method === "OPTIONS") {
-    handleOptions(res);
+    handlers.handleOptions(res);
     return;
   }
 
   if (req.method === "GET" && pathname === "/health") {
-    handleHealth(res);
+    handlers.handleHealth(res);
     return;
   }
 
   if (req.method === "POST" && pathname === "/chat") {
-    void handleChat(req, res);
+    void handlers.handleChat(req, res);
     return;
   }
 
   if (req.method === "GET" && pathname === "/state") {
-    handleStateGet(res);
+    handlers.handleStateGet(res);
     return;
   }
 
   if (req.method === "POST" && pathname === "/state") {
-    void handleStatePost(req, res);
+    void handlers.handleStatePost(req, res);
     return;
   }
 
-  if (req.method === "GET" && (pathname === "/" || pathname === "/index.html")) {
-    if (serveStaticFile(res, path.join(CLIENT_DIR, "index.html"))) {
-      return;
-    }
-  }
-
-  if (req.method === "GET" && pathname === "/style.css") {
-    if (serveStaticFile(res, path.join(CLIENT_DIR, "style.css"))) {
-      return;
-    }
-  }
-
-  if (req.method === "GET" && pathname === "/script.js") {
-    if (serveStaticFile(res, path.join(CLIENT_DIR, "script.js"))) {
-      return;
-    }
-  }
-
-  if (req.method === "GET" && pathname === "/config.js") {
-    if (serveStaticFile(res, path.join(CLIENT_DIR, "config.js"))) {
+  if (req.method === "GET" && staticFiles[pathname]) {
+    const filePath = path.join(CLIENT_DIR, staticFiles[pathname]);
+    if (serveStaticFile(res, filePath)) {
       return;
     }
   }
